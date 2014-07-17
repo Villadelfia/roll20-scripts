@@ -19,6 +19,34 @@ on("chat:message", function(msg) {
 
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    if(msg.content.contains("!vs ")) {
+        var roll = msg.content.replace("!vs ", "").trim();
+        var args = roll.split(" ");
+        var result = randomInteger(20) + parseInt(args[0]);
+        var target = parseInt(args[1]);
+        var descriptor = args[2];
+        
+        if(result >= target) {
+            sendChat(msg.who, "/me rolls " + result + " vs. " + descriptor + " (" + target + "), and hits.");
+        } else {
+            sendChat(msg.who, "/me rolls " + result + " vs. " + descriptor + " (" + target + "), and misses.");
+        }
+    }
+});
+
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    if(msg.content.contains("!damage ")) {
+        var roll = msg.content.replace("!damage ", "").trim();
+        var args = roll.split(" ");
+        var dice = args[0];
+        
+        sendChat(msg.who, "/me hits for [["+dice+"]] damage.");
+    }
+});
+
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
     if(msg.content.contains("!rigroll ")) {
         var parts = msg.content.replace("!rigroll ", "").split(":");
         var roll = parts[0];
