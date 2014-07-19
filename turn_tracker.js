@@ -65,6 +65,8 @@ on("chat:message", function (msg) {
             var currentModifier = 0;
             var totalValue = 0;
             var diceRoll = randomInteger(20);
+            
+            var addToInitiative = true;
 
             // If the current token represents a character.
             if (currChar.length != 0) {
@@ -85,21 +87,25 @@ on("chat:message", function (msg) {
             // For NPC tokens.
             } else {
                 // Set the modifier.
-                currentModifier = obj.get("bar3_value") || "0";
+                currentModifier = obj.get("bar3_value") || "";
                 currentModifier = parseInt(currentModifier);
-                if(isNaN(currentModifier))
+                if(isNaN(currentModifier)) {
                     currentModifier = 0;
+                    addToInitiative = false;
+                }
                     
                 // Set the roll result.
                 totalValue = diceRoll + currentModifier;
             }
             
             // Push the value.
-            turnorder.push({
-                id: objId,
-                pr: totalValue,
-                custom: currentModifier,
-            });
+            if(addToInitiative) {
+                turnorder.push({
+                    id: objId,
+                    pr: totalValue,
+                    custom: currentModifier,
+                });
+            }
         });
         
         Campaign().set("turnorder", JSON.stringify(turnorder));
