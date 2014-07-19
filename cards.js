@@ -17,10 +17,23 @@ var endTag = "</div>";
 on("chat:message", function(msg) {
     if(msg.type == "api" && msg.content.indexOf("!card") !== -1) {
         var msgcontent = msg.content;
+        
+        if(msg.inlinerolls) {
+            for(var i = 0; i < msg.inlinerolls.length; ++i) {
+                msgcontent = msgcontent.replace("$[[" + i + "]]", "[[" + msg.inlinerolls[i].expression + "]]");
+            }
+        }
+        
         var msgcontent = msgcontent.replace(new RegExp("__B__",  'g'), "<b>");
         var msgcontent = msgcontent.replace(new RegExp("__EB__", 'g'), "</b>");
         var msgcontent = msgcontent.replace(new RegExp("__I__",  'g'), "<i>");
         var msgcontent = msgcontent.replace(new RegExp("__EI__", 'g'), "</i>");
+        var msgcontent = msgcontent.replace(new RegExp("__S__",  'g'), "<small>");
+        var msgcontent = msgcontent.replace(new RegExp("__ES__", 'g'), "</small>");
+        var msgcontent = msgcontent.replace(new RegExp("__U__",  'g'), "<u>");
+        var msgcontent = msgcontent.replace(new RegExp("__EU__", 'g'), "</u>");
+        var msgcontent = msgcontent.replace(new RegExp("__NAME__", 'g'), msg.who);
+        var msgcontent = msgcontent.replace(new RegExp("__BR__",  'g'), "<br/>");
         var messagercv = msgcontent.split("|||");
         if(messagercv.length < 3) return;
         
