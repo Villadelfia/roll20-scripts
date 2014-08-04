@@ -1,5 +1,5 @@
 on("chat:message", function(msg) {
-    if(msg.type == "api" && msg.content.indexOf("!t ") !== -1) {
+    if(msg.type == "api" && (msg.content.indexOf("!t ") !== -1 || msg.content.indexOf("!template ") !== -1)) {
         var sender = msg.who.split(" ")[0];
         // Get master template tokens.
         var cone_15 = findObjs({

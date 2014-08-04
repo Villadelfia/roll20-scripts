@@ -30,12 +30,14 @@ on("chat:message", function(msg) {
         var modifier = parseInt(args[0]);
         var result = diceRoll + modifier;
         var target = parseInt(args[1]);
-        var descriptor = args[2];
+        var descriptor = "";
+        for(var i = 2; i < args.length; ++i)
+            descriptor += args[i] + " ";
         
         if(result >= target) {
-            sendChat(msg.who, "/me rolls " + result + " (1d20("+diceRoll+")+"+modifier+") vs. " + descriptor + " (" + target + "), and hits.");
+            sendFormatted("R|||Monster Attack|||I roll a [["+ result +"]] ([[" + diceRoll + "]] on the die) vs." + descriptor + "([[" + target + "]])||| The attack hits.", msg);
         } else {
-            sendChat(msg.who, "/me rolls " + result + " (1d20("+diceRoll+")+"+modifier+") vs. " + descriptor + " (" + target + "), and misses.");
+            sendFormatted("G|||Monster Attack|||I roll a [["+ result +"]] ([[" + diceRoll + "]] on the die) vs." + descriptor + "([[" + target + "]])||| The attack misses.", msg);
         }
     }
 });

@@ -14,6 +14,56 @@ var lastOddTag = "<div style =\"" + lastRowStyle + oddRow + "\">";
 var lastEvenTag = "<div style =\"" + lastRowStyle + evenRow + "\">";
 var endTag = "</div>";
 
+var sendFormatted = function(message, msg) {
+    var msgcontent = message;
+        
+    var msgcontent = msgcontent.replace(new RegExp("__B__",  'g'), "<b>");
+    var msgcontent = msgcontent.replace(new RegExp("__EB__", 'g'), "</b>");
+    var msgcontent = msgcontent.replace(new RegExp("__I__",  'g'), "<i>");
+    var msgcontent = msgcontent.replace(new RegExp("__EI__", 'g'), "</i>");
+    var msgcontent = msgcontent.replace(new RegExp("__S__",  'g'), "<small>");
+    var msgcontent = msgcontent.replace(new RegExp("__ES__", 'g'), "</small>");
+    var msgcontent = msgcontent.replace(new RegExp("__U__",  'g'), "<u>");
+    var msgcontent = msgcontent.replace(new RegExp("__EU__", 'g'), "</u>");
+    var msgcontent = msgcontent.replace(new RegExp("__NAME__", 'g'), msg.who);
+    var msgcontent = msgcontent.replace(new RegExp("__BR__",  'g'), "<br/>");
+    var messagercv = msgcontent.split("|||");
+    if(messagercv.length < 2) return;
+        
+    var ctr = 0
+    var changed = 1;
+    var title = titleTagB;
+    if(messagercv[0] == "R") {
+        changed = 0;
+        title = titleTagR;
+        ++ctr;
+    } else if(messagercv[0] == "G") {
+        changed = 0;
+        title = titleTagG;
+        ++ctr;
+    } else if(messagercv[0] == "B") {
+        changed = 0;
+        ++ctr;
+    }
+        
+    var message = "";
+    message = message + title + messagercv[ctr] + endTag;
+    ++ctr;
+        
+    while(ctr < messagercv.length) {
+        var last = ctr == messagercv.length-1;
+        var tag = "";
+        if(last)
+            tag = (ctr % 2 == changed ? lastOddTag : lastEvenTag);
+        else
+            tag = (ctr % 2 == changed ? oddTag : evenTag);
+        message = message + tag +  messagercv[ctr] + endTag;
+        ++ctr;
+    }
+    
+    sendChat(msg.who, message);
+}
+
 on("chat:message", function(msg) {
     if(msg.type == "api" && msg.content.indexOf("!card") !== -1) {
         var msgcontent = msg.content;
@@ -87,5 +137,50 @@ on("chat:message", function(msg) {
         message = message + oddTag +  "Ability score increase: At level 4, 8, 12, 16 and 20 you gain a +1 in one ability score." + endTag;
         message = message + lastEvenTag + "Derived statistics: Go over your character sheet and make sure all attack and damage rolls, your saving throw DCs for your spells and special abilities, your ability score modifiers and your AC are all up-to-date." + endTag;
         sendChat(msg.who, message);
+    }
+});
+
+on("chat:message", function(msg) {
+    if(msg.type == "api" && msg.content.indexOf("!scroll") !== -1) {
+        var messagercv = msg.content.split(" ");
+        if(messagercv.length < 4) return;
+        var level = parseInt(messagercv[1]);
+        var cl = parseInt(messagercv[2]);
+        var mats = parseInt(messagercv[3]);
+        if(isNaN(level) || isNaN(cl) || isNaN(mats)) return;
+        if(level == 0) level = 0.5;
+        var price = 12.5*level*cl;
+        price += mats;
+
+        var timeunit = "";
+        if(price <= 750) {
+            timeunit = "hours";
+        } else if(price >= 2000) {
+            timeunit = "days";
+        } else {
+            timeunit = "day";
+        }
+
+        var time = 1;
+        if(price <= 750) {
+            if(price <= 250)
+                time = 2;
+            else if(price <= 500)
+                time = 4;
+            else
+                time = 6;
+        } else {
+            if(price < 2000) {
+                time = 1;
+            } else {
+                time = Math.floor(price/1000);
+            }
+        }
+        
+        var message = "Scribe scoll__BR____S____NAME____ES__";
+        message = message + "|||Scribing a scroll with a level [[" + level + "]] spell at caster level [[" + cl + "]].";
+        message = message + "|||This will cost [[" + price + "]] gp and take [[" + time + "]] " + timeunit + ".";
+        message = message + "|||The spellcraft to succeed is DC [[5+" + cl + "]], or DC [[10+" + cl + "]] to halve the time taken. This check is made after the money and time is spent.";
+        sendFormatted(message, msg);
     }
 });
