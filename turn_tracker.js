@@ -83,7 +83,7 @@ on("chat:message", function (msg) {
                 // Set the roll result and give feedback.
                 totalValue = diceRoll + currentModifier;
                 var printableModifier = (currentModifier > 0 ? "+" + currentModifier : currentModifier);
-                sendChat("character|" + currId, "/me rolls " + totalValue + " (1d20(" + diceRoll + ")" + printableModifier + ") for initiative!");
+                sendChat("character|" + currId, "/me rolls [[" + totalValue + "]] (1d20(" + diceRoll + ")" + printableModifier + ") for initiative!");
             // For NPC tokens.
             } else {
                 // Set the modifier.
