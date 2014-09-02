@@ -63,6 +63,19 @@ var sendFormatted = function(message, msg) {
         ++ctr;
     } else if(messagercv[0] == "B") {
         changed = 0;
+        title = titleTagB;
+        ++ctr;
+    } else if(messagercv[0].contains("#")) {
+        changed = 0;
+        var titleStyle = messagercv[0].split(";");
+        var newTitleTag = titleTagB;
+        if(titleStyle.length < 2) {
+            newTitleTag = newTitleTag.replace("#004", messagercv[0]);
+        } else {
+            newTitleTag = newTitleTag.replace("#004", titleStyle[0]);
+            newTitleTag = newTitleTag.replace("#FFF", titleStyle[1]);
+        }
+        title = newTitleTag;
         ++ctr;
     }
 
