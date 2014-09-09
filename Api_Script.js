@@ -35,18 +35,18 @@ String.prototype.endsWith = function(str) {
 var sendFormatted = function(message, msg) {
     var msgcontent = message;
 
-    var msgcontent = msgcontent.replace(new RegExp("__B__", 'g'), "<b>");
-    var msgcontent = msgcontent.replace(new RegExp("__EB__", 'g'), "</b>");
-    var msgcontent = msgcontent.replace(new RegExp("__C__", 'g'), "<div style=\"text-align: center;\">");
-    var msgcontent = msgcontent.replace(new RegExp("__EC__", 'g'), "</div>");
-    var msgcontent = msgcontent.replace(new RegExp("__I__", 'g'), "<i>");
-    var msgcontent = msgcontent.replace(new RegExp("__EI__", 'g'), "</i>");
-    var msgcontent = msgcontent.replace(new RegExp("__S__", 'g'), "<small>");
-    var msgcontent = msgcontent.replace(new RegExp("__ES__", 'g'), "</small>");
-    var msgcontent = msgcontent.replace(new RegExp("__U__", 'g'), "<u>");
-    var msgcontent = msgcontent.replace(new RegExp("__EU__", 'g'), "</u>");
-    var msgcontent = msgcontent.replace(new RegExp("__NAME__", 'g'), msg.who);
-    var msgcontent = msgcontent.replace(new RegExp("__BR__", 'g'), "<br/>");
+    var msgcontent = msgcontent.replace(new RegExp("__B__", 'ig'), "<b>");
+    var msgcontent = msgcontent.replace(new RegExp("__EB__", 'ig'), "</b>");
+    var msgcontent = msgcontent.replace(new RegExp("__C__", 'ig'), "<div style=\"text-align: center;\">");
+    var msgcontent = msgcontent.replace(new RegExp("__EC__", 'ig'), "</div>");
+    var msgcontent = msgcontent.replace(new RegExp("__I__", 'ig'), "<i>");
+    var msgcontent = msgcontent.replace(new RegExp("__EI__", 'ig'), "</i>");
+    var msgcontent = msgcontent.replace(new RegExp("__S__", 'ig'), "<small>");
+    var msgcontent = msgcontent.replace(new RegExp("__ES__", 'ig'), "</small>");
+    var msgcontent = msgcontent.replace(new RegExp("__U__", 'ig'), "<u>");
+    var msgcontent = msgcontent.replace(new RegExp("__EU__", 'ig'), "</u>");
+    var msgcontent = msgcontent.replace(new RegExp("__NAME__", 'ig'), msg.who);
+    var msgcontent = msgcontent.replace(new RegExp("__BR__", 'ig'), "<br/>");
     var messagercv = msgcontent.split("|||");
     if(messagercv.length < 2) return;
 
