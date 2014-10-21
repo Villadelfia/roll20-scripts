@@ -1753,10 +1753,15 @@ on("ready",function(){
 //     - Clears the current loot pile.
 //   !loot add
 //   !loot add money
+//   !loot add json {"money": <number>, "items": [<string>, <string>, ...]}
 //     - Adds loot.
 //   !loot take
 //   !loot take money
 //     - Takes loot.
+//   !loot help
+//     - Prints help on the available commands.
+//   !loot pack
+//     - Packs the existing loot pile to reuse numbers.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
     var sender;
@@ -1808,6 +1813,25 @@ on("chat:message", function(msg) {
             if(isNaN(money)) return;
             state.lootmoney += money;
             sendChat("Loot Pile", "/w gm Added " + money + " gp to loot pile.");
+        } else if(args[1] == 'json') {
+            if(args.length < 3) return;
+            
+            try {
+                var json = JSON.parse(args.slice(2).join(' '));
+            } catch(e) {
+                sendChat("Loot Pile", "/w gm Error in JSON: " + e);
+                return;
+            }
+
+            json.money = parseFloat(json.money);
+            if(!isNaN(json.money))
+                state.lootmoney += json.money;
+
+            for(var i = 0; i < json.items.length; ++i) {
+                state.lootpile.push(json.items[i]);
+            }
+
+            sendChat("Loot Pile", "/w gm Added items and/or money from JSON.");
         } else {
             state.lootpile.push(args.slice(1).join(' '));
             sendChat("Loot Pile", "/w gm Added " + args.slice(1).join(' ') + 
@@ -1874,7 +1898,11 @@ on("chat:message", function(msg) {
                     "__I__GM Functions__EI__|||"+
                     "Clear loot pile:__BR____B__!loot clear__EB__|||"+
                     "Add item to loot pile:__BR____B__!loot add item__EB__|||"+
-                    "Add money to loot pile:__BR____B__!loot add money amount__EB__|||"+
+                    "Add money to loot pile:__BR____B__!loot add money amount"+
+                    "__EB__|||"+
+                    "Add json specification to loot pile:__BR____B__!loot add"+
+                    " json {\"money\": &lt;number&gt;, \"items\": [&lt;string"+
+                    "&gt;, &lt;string&gt;, ...]}__EB__|||"+
                     "Pack remaining loot:__BR____B__!loot pack__EB__", 
                     {who: 'Loot Pile'});
         }
