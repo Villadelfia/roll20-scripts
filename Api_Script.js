@@ -1789,6 +1789,11 @@ on("chat:message", function(msg) {
         sendFormatted(message, {who: "Loot Pile"});
     };
 
+    var lootPack = function() {
+        state.lootpile = _.without(state.lootpile, '__NONE__');
+        sendChat('Loot Pile', '/w gm Remaining loot packed.');
+    }
+
     var lootClear = function() {
         state.lootmoney = 0;
         state.lootpile = [];
@@ -1856,14 +1861,22 @@ on("chat:message", function(msg) {
         case 'take':
             lootTake();
             break;
+        case 'pack':
+            if(msg.who.contains('(GM)')) lootPack();
+            break;
         case 'help':
             sendFormatted(
-                    "B|||Loot Pile|||Get loot pile:__BR____B__!loot__EB__|||A"+
-                    "dd item to loot pile:__BR____B__!loot add item__EB__|||Ad"+
-                    "d money to loot pile:__BR____B__!loot add money amount__E"+
-                    "B__|||Take item X:__BR____B__!loot take X__EB__|||Take X "+
-                    "money:__BR____B__!loot take money X__EB__|||Clear loot pi"+
-                    "le:__BR____B__!loot clear__EB__", {who: 'Loot Pile'});
+                    "B|||Loot Pile|||"+
+                    "__I__Player Functions__EI__|||"+
+                    "Get loot pile:__BR____B__!loot__EB__|||"+
+                    "Take X money:__BR____B__!loot take money X__EB__|||"+
+                    "Take item X:__BR____B__!loot take X__EB__|||"+
+                    "__I__GM Functions__EI__|||"+
+                    "Clear loot pile:__BR____B__!loot clear__EB__|||"+
+                    "Add item to loot pile:__BR____B__!loot add item__EB__|||"+
+                    "Add money to loot pile:__BR____B__!loot add money amount__EB__|||"+
+                    "Pack remaining loot:__BR____B__!loot pack__EB__", 
+                    {who: 'Loot Pile'});
         }
     }
 });
