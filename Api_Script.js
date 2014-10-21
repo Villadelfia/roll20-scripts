@@ -1869,3 +1869,4 @@ on("chat:message", function(msg) {
 });
 // }}}
 
+// vim: fdm=marker
