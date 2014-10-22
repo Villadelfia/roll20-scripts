@@ -1774,6 +1774,7 @@ on("ready",function(){
 //     - Packs the existing loot pile to reuse numbers.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    if(!msg.content.startsWith("!loot")) return;
     msg = _.clone(msg);
     var sender;
     var args;
@@ -1798,13 +1799,15 @@ on("chat:message", function(msg) {
                 message += "Money: " + state.lootmoney + " gp.|||";
             }
 
+            var itemcount = 0;
             for(var i = 0; i < state.lootpile.length; ++i) {
                 if(state.lootpile[i] !== "__NONE__") {
                     message += (i+1) + ": " + state.lootpile[i] + "__BR__";
+                    itemcount++;
                 }
             }
 
-            if(state.lootpile.length != 0) 
+            if(itemcount != 0) 
                 message += "|||";
 
             message += "To claim X gp:__BR____B__!loot take money X__EB____BR_"+
@@ -1864,6 +1867,7 @@ on("chat:message", function(msg) {
             if(args.length < 3) return;
             var money = parseFloat(args[2]);
             if(isNaN(money)) return;
+            if(money <= 0) return;
             if(money <= state.lootmoney) {
                 state.lootmoney -= money;
                 sendFormatted("G|||Money Taken|||" + sender + " took " + 
@@ -1875,6 +1879,7 @@ on("chat:message", function(msg) {
         } else {
             var id = parseInt(args[1]);
             if(isNaN(id)) return;
+            if(id <= 0) return;
             if(id > state.lootpile.length) 
                 return sendError("That item id does not exist", "Loot Pile");
             if(state.lootpile[id-1] == '__NONE__') {
