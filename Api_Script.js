@@ -107,6 +107,91 @@ var sendError = function(error, source) {
 };
 // }}}
 
+// IsGM module {{{
+var IsGMModule = IsGMModule || {
+    version: 0.6,
+    active: true,
+    reset_password: "reset",
+
+    CheckInstall: function() {
+        var players = findObjs({_type:"player"});
+
+        if( ! _.has(state,'IsGM') || ! _.has(state.IsGM,'version') || 
+                state.IsGM.version != IsGMModule.version ) {
+            state.IsGM={
+                version: IsGMModule.version,
+                gms: [],
+                players: [],
+                unknown: []
+            };
+        }
+        state.IsGM.unknown=_.difference(
+            _.pluck(players,'id'),
+            state.IsGM.gms,
+            state.IsGM.players
+        );
+        IsGMModule.active = (state.IsGM.unknown.length>0);
+    },
+    IsGM: function(id) {
+        return _.contains(state.IsGM.gms,id);
+    },
+    HandleMessages: function(msg) {
+        if(msg.type != "api") {
+            if(IsGMModule.active && msg.playerid != 'API') {
+                if(_.contains(state.IsGM.unknown, msg.playerid)) {
+                    var player=getObj('player',msg.playerid);
+                    if("" == player.get('speakingas') || 'player|'+msg.playerid 
+                            == player.get('speakingas')) {
+                        if(msg.who == player.get('_displayname')) {
+                            state.IsGM.players.push(msg.playerid);
+                        } else {
+                            state.IsGM.gms.push(msg.playerid);
+                            sendChat('IsGM','/w gm '+player.get('_displayname')+
+                                    ' is now flagged as a GM.')
+                        }
+                        state.IsGM.unknown=
+                            _.without(state.IsGM.unknown,msg.playerid);
+                        IsGMModule.active = (state.IsGM.unknown.length>0);
+                    }
+                }
+            }
+        } else {
+            var tokenized = msg.content.split(" ");
+            var command = tokenized[0];
+            switch(command) {
+                case '!reset-isgm':
+                    if(isGM(msg.playerid) || (tokenized.length>1 && tokenized[1] 
+                                == IsGMModule.reset_password)) {
+                        delete state.IsGM;
+                        IsGMModule.CheckInstall();
+                        sendChat('IsGM','/w gm IsGM data reset.');
+                    } else {
+                        var who=getObj('player',msg.playerid).get('_displaynam'+
+                                'e').split(' ')[0];
+                        sendChat('IsGM','/w '+who+' ('+who+
+                                ')Only GMs may reset the IsGM data.If you '+
+                                'are a GM you can reset by specifying the rese'+
+                                't password from the top of the IsGM script as'+
+                                ' an argument to !reset-isgm')
+                    }
+                    break;
+            }
+        }
+    },
+    RegisterEventHandlers: function(){
+        on('chat:message',IsGMModule.HandleMessages);
+    },
+
+};
+on('ready',function(){
+    IsGMModule.CheckInstall();
+    IsGMModule.RegisterEventHandlers();
+});
+var isGM = isGM || function(id) {
+    return IsGMModule.IsGM(id);
+};
+// }}}
+
 // Turn tracker. {{{
 // Implements the commands:
 //   !togglelayer
@@ -124,6 +209,7 @@ var sendError = function(error, source) {
 //     - Clears the turn order.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
 
     var togglelayer = function() {
         _.each(msg.selected, function(selected) {
@@ -303,6 +389,7 @@ on("chat:message", function(msg) {
 //       top right of the map.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
     var sender = msg.who.split(" ")[0];
 
     if(msg.content == "!t" || msg.content == "!template") {
@@ -610,6 +697,7 @@ on("chat:message", function(msg) {
 //     - Allows players to calculate scroll scribing costs.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
     var message = "";
     var sender = msg.who.split(" ")[0];
 
@@ -705,10 +793,12 @@ on("chat:message", function(msg) {
 //     - Rolls attack damage in a pretty display.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
     var message;
     var roll;
     var args;
     var messagercv;
+
     if(msg.content.startsWith("!blindroll ")) {
         roll = msg.content.replace("!blindroll ", "").trim();
         var sender = msg.who.split(" ")[0];
@@ -805,6 +895,8 @@ on("chat:message", function(msg) {
 //   !fumble [magic|melee|ranged|natural]
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
+
     // Crits {{{
     var critBludgeonName = [
         "Shattered Hand", "Rattled", "Thunder Strike", "Lights Out", 
@@ -1444,88 +1536,6 @@ on("chat:message", function(msg) {
 // }}}
 
 // Torch functionality {{{
-var IsGMModule = IsGMModule || {
-    version: 0.6,
-    active: true,
-    reset_password: "reset",
-
-    CheckInstall: function() {
-        var players = findObjs({_type:"player"});
-
-        if( ! _.has(state,'IsGM') || ! _.has(state.IsGM,'version') || 
-                state.IsGM.version != IsGMModule.version ) {
-            state.IsGM={
-                version: IsGMModule.version,
-                gms: [],
-                players: [],
-                unknown: []
-            };
-        }
-        state.IsGM.unknown=_.difference(
-            _.pluck(players,'id'),
-            state.IsGM.gms,
-            state.IsGM.players
-        );
-        IsGMModule.active = (state.IsGM.unknown.length>0);
-    },
-    IsGM: function(id) {
-        return _.contains(state.IsGM.gms,id);
-    },
-    HandleMessages: function(msg) {
-        if(msg.type != "api") {
-            if(IsGMModule.active && msg.playerid != 'API') {
-                if(_.contains(state.IsGM.unknown, msg.playerid)) {
-                    var player=getObj('player',msg.playerid);
-                    if("" == player.get('speakingas') || 'player|'+msg.playerid 
-                            == player.get('speakingas')) {
-                        if(msg.who == player.get('_displayname')) {
-                            state.IsGM.players.push(msg.playerid);
-                        } else {
-                            state.IsGM.gms.push(msg.playerid);
-                            sendChat('IsGM','/w gm '+player.get('_displayname')+
-                                    ' is now flagged as a GM.')
-                        }
-                        state.IsGM.unknown=
-                            _.without(state.IsGM.unknown,msg.playerid);
-                        IsGMModule.active = (state.IsGM.unknown.length>0);
-                    }
-                }
-            }
-        } else {
-            var tokenized = msg.content.split(" ");
-            var command = tokenized[0];
-            switch(command) {
-                case '!reset-isgm':
-                    if(isGM(msg.playerid) || (tokenized.length>1 && tokenized[1] 
-                                == IsGMModule.reset_password)) {
-                        delete state.IsGM;
-                        IsGMModule.CheckInstall();
-                        sendChat('IsGM','/w gm IsGM data reset.');
-                    } else {
-                        var who=getObj('player',msg.playerid).get('_displaynam'+
-                                'e').split(' ')[0];
-                        sendChat('IsGM','/w '+who+' ('+who+
-                                ')Only GMs may reset the IsGM data.If you '+
-                                'are a GM you can reset by specifying the rese'+
-                                't password from the top of the IsGM script as'+
-                                ' an argument to !reset-isgm')
-                    }
-                    break;
-            }
-        }
-    },
-    RegisterEventHandlers: function(){
-        on('chat:message',IsGMModule.HandleMessages);
-    },
-
-};
-on('ready',function(){
-    IsGMModule.CheckInstall();
-    IsGMModule.RegisterEventHandlers();
-});
-var isGM = isGM || function(id) {
-    return IsGMModule.IsGM(id);
-};
 var Torch = Torch || (function() {
     'use strict';
 
@@ -1764,11 +1774,20 @@ on("ready",function(){
 //     - Packs the existing loot pile to reuse numbers.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    msg = _.clone(msg);
     var sender;
     var args;
 
     state.lootmoney = state.lootmoney || 0;
     state.lootpile = state.lootpile || [];
+
+    var gmState = function(msg) {
+        if(typeof isGM !== 'undefined' && _.isFunction(isGM)) {
+            return isGM(msg.playerid);
+        } else {
+            return msg.who.contains('(GM)');
+        }
+    };
 
     var lootList = function() {
         var message = "B|||Loot Pile|||";
@@ -1877,16 +1896,16 @@ on("chat:message", function(msg) {
         if(args.length == 0) return;
         switch(args[0]) {
         case 'add':
-            if(msg.who.contains('(GM)')) lootAdd();
+            if(gmState(msg)) lootAdd();
             break;
         case 'clear':
-            if(msg.who.contains('(GM)')) lootClear();
+            if(gmState(msg)) lootClear();
             break;
         case 'take':
             lootTake();
             break;
         case 'pack':
-            if(msg.who.contains('(GM)')) lootPack();
+            if(gmState(msg)) lootPack();
             break;
         case 'help':
             sendFormatted(
