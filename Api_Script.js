@@ -26,6 +26,7 @@ var evenTag = "<div style =\"" + rowStyle + evenRow + "\">";
 var lastOddTag = "<div style =\"" + lastRowStyle + oddRow + "\">";
 var lastEvenTag = "<div style =\"" + lastRowStyle + evenRow + "\">";
 var endTag = "</div>";
+var sendNextMessageToGm = false;
 
 String.prototype.contains = function(str, startIndex) {
     return ''.indexOf.call(this, str, startIndex) !== -1;
@@ -38,6 +39,9 @@ String.prototype.endsWith = function(str) {
 };
 
 var sendFormatted = function(message, msg) {
+    var toGm = sendNextMessageToGm;
+    sendNextMessageToGm = false;
+    
     var msgcontent = message;
 
     var msgcontent = msgcontent.replace(new RegExp("__B__", 'ig'), "<b>");
@@ -99,7 +103,10 @@ var sendFormatted = function(message, msg) {
         ++ctr;
     }
 
-    sendChat(msg.who, message);
+    if(toGm)
+        sendChat(msg.who, "/w gm " + message);
+    else
+        sendChat(msg.who, message);
 };
 
 var sendError = function(error, source) {
@@ -1776,6 +1783,7 @@ on("chat:message", function(msg) {
     if(msg.type != "api") return;
     if(!msg.content.startsWith("!loot")) return;
     msg = _.clone(msg);
+    var currency = "gp";
     var sender;
     var args;
 
@@ -1790,30 +1798,35 @@ on("chat:message", function(msg) {
         }
     };
 
-    var lootList = function() {
+    var lootList = function(gmWhisper) {
         var message = "B|||Loot Pile|||";
+        var empty = true;
         if(state.lootmoney == 0 && state.lootpile.length == 0) {
             message += "The loot pile is empty.";
         } else {
             if(state.lootmoney > 0) {
-                message += "Money: " + state.lootmoney + " gp.|||";
+                message += "Money: " + state.lootmoney + " " + currency + 
+                    ".";
+                empty = false;
             }
 
             var itemcount = 0;
             for(var i = 0; i < state.lootpile.length; ++i) {
                 if(state.lootpile[i] !== "__NONE__") {
+                    if(!empty && itemcount == 0)
+                        message += "|||";
                     message += (i+1) + ": " + state.lootpile[i] + "__BR__";
                     itemcount++;
+                    empty = false;
                 }
             }
-
-            if(itemcount != 0) 
-                message += "|||";
-
-            message += "To claim X gp:__BR____B__!loot take money X__EB____BR_"+
-                "_To claim item number X:__BR____B__!loot take X__EB__";
         }
+        if(gmWhisper) sendNextMessageToGm = true;
         sendFormatted(message, {who: "Loot Pile"});
+        if(!empty && !gmWhisper)
+            sendChat("Loot Pile", "/direct <i>To take X money:<br /><b>!loot t"+
+                    "ake money X</b><br />To take item number X:<br /><b>!loot"+
+                    " take X</b></i>");
     };
 
     var lootPack = function() {
@@ -1834,7 +1847,8 @@ on("chat:message", function(msg) {
             var money = parseFloat(args[2]);
             if(isNaN(money)) return;
             state.lootmoney += money;
-            sendChat("Loot Pile", "/w gm Added " + money + " gp to loot pile.");
+            sendChat("Loot Pile", "/w gm Added " + money + " " + currency + 
+                    " to loot pile.");
         } else if(args[1] == 'json') {
             if(args.length < 3) return;
             
@@ -1871,7 +1885,7 @@ on("chat:message", function(msg) {
             if(money <= state.lootmoney) {
                 state.lootmoney -= money;
                 sendFormatted("G|||Money Taken|||" + sender + " took " + 
-                        money + " gp", {who: "Loot Pile"});
+                        money + " " + currency, {who: "Loot Pile"});
             } else {
                 sendError("There's not enough money in the loot pile to take t"+
                         "hat much.", "Loot Pile");
@@ -1893,7 +1907,7 @@ on("chat:message", function(msg) {
     };
 
     if(msg.content == '!loot') {
-        lootList();
+        lootList(false);
     } else if(msg.content.startsWith("!loot")) {
         msg.content = msg.content.replace("!loot", "").trim();
         sender = msg.who.split(" ")[0];
@@ -1929,6 +1943,9 @@ on("chat:message", function(msg) {
                     "&gt;, &lt;string&gt;, ...]}__EB__|||"+
                     "Pack remaining loot:__BR____B__!loot pack__EB__", 
                     {who: 'Loot Pile'});
+            break;
+        case 'gm':
+            if(gmState(msg)) lootList(true);
         }
     }
 });
