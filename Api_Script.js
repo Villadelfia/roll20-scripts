@@ -920,21 +920,28 @@ on("chat:message", function(msg) {
         "Cracked Knee", "What's Going On?", "Crushed Toe", "Off Balance"
     ];
     var critBludgeonEffect = [
-        "Normal damage and [[1d2]] Con and Str damage. Hand useless until healed", 
-        "Normal damage and target is confused for [[1d3]] rounds (Fort negates)|||Save DC is the result of the confirmation roll", 
+        "Normal damage and [[1d2]] Con and Str damage. Hand useless until heal"+
+        "ed", 
+        "Normal damage and target is confused for [[1d3]] rounds (Fort negates"+
+            ")|||Save DC is the result of the confirmation roll", 
         "Double damage and target is deafened for [[1d4]] rounds", 
         "Normal damage and target is blinded for [[1d3]] rounds", 
-        "Normal damage and target cannot breathe or speak, DC 20 Heal check ends condition", 
+        "Normal damage and target cannot breathe or speak, DC 20 Heal check en"+
+            "ds condition", 
         "Double damage and [[1d4]] bleed", 
         "Double damage and target is disarmed (1 item)", 
-        "Double damage and one free attack against the target with a -5 penalty", 
+        "Double damage and one free attack against the target with a -5 penalt"+
+            "y", 
         "Double damage and [[1d6]] Dex damage", 
         "Double damage and [[2d6]] nonlethal damage", 
-        "Normal damage and [[1d4]] Con and Dex damage. Target's speeds are reduced by half until healed", 
+        "Normal damage and [[1d4]] Con and Dex damage. Target's speeds are red"+
+            "uced by half until healed", 
         "Normal damage and target is flat-footed for 1 round", 
         "Normal damage and target is stunned for 1 round", 
-        "Double damage and 1 Int bleed (Fort negates save each round)|||Save DC is the result of the confirmation roll", 
-        "Double damage and target is nauseated for 1 round (Fort negates)|||Save DC is the result of the confirmation roll", 
+        "Double damage and 1 Int bleed (Fort negates save each round)|||Save D"+
+            "C is the result of the confirmation roll", 
+        "Double damage and target is nauseated for 1 round (Fort negates)|||Sa"+
+            "ve DC is the result of the confirmation roll", 
         "Double damage and [[2d6]] damage to metal armor (ignore hardness)", 
         "Normal damage and target is exhausted for [[1d4]] rounds", 
         "Normal damage and target dazed and blinded for 1 round", 
@@ -944,17 +951,27 @@ on("chat:message", function(msg) {
         "Triple damage", 
         "Double damage and target is knocked prone", 
         "Normal damage and target is staggered for [[1d6]] rounds", 
-        "Double damage and 1 Dex damage and target's speeds are reduced by 5 feet until healed", 
-        "Double damage and [[2d6]] Int drain (Fort half)|||Save DC is the result of the confirmation roll", 
-        "Normal damage and target is knocked prone and stunned for 1 round (Fort negates stun)|||Save DC is the result of the confirmation roll", 
-        "Normal damage and either [[1d3]] Dex damage and halve speed (leg) or [[1d3]] Str damage (arm). Limb useless until healed", 
+        "Double damage and 1 Dex damage and target's speeds are reduced by 5 f"+
+            "eet until healed", 
+        "Double damage and [[2d6]] Int drain (Fort half)|||Save DC is the resu"+
+            "lt of the confirmation roll", 
+        "Normal damage and target is knocked prone and stunned for 1 round (Fo"+
+            "rt negates stun)|||Save DC is the result of the confirmation roll", 
+        "Normal damage and either [[1d3]] Dex damage and halve speed (leg) or "+
+            "[[1d3]] Str damage (arm). Limb useless until healed", 
         "Double damage to target and normal damage to adjacent target", 
-        "Normal damage and [[1d4]] Con bleed (DC 15 Fort negates, save each round)", 
-        "Normal damage and [[1d4]] Dex damage and target is disarmed (1 item, Ref negates drop)|||Save DC is the result of the confirmation roll", 
-        "Normal damage and a free attack against adjacent foes at the same bonus", 
+        "Normal damage and [[1d4]] Con bleed (DC 15 Fort negates, save each ro"+
+            "und)", 
+        "Normal damage and [[1d4]] Dex damage and target is disarmed (1 item, "+
+            "Ref negates drop)|||Save DC is the result of the confirmation rol"+
+            "l", 
+        "Normal damage and a free attack against adjacent foes at the same bon"+
+            "us", 
         "Normal damage and double nonlethal damage", 
-        "Normal damage and 1 Con damage. Target loses bite, gains 20% spell failure chance for verbal spells", 
-        "Normal damage and a free trip attempt versus target and all adjacent enemies", 
+        "Normal damage and 1 Con damage. Target loses bite, gains 20% spell fa"+
+            "ilure chance for verbal spells", 
+        "Normal damage and a free trip attempt versus target and all adjacent "+
+            "enemies", 
         "Normal damage and target dazed for [[1d4]] rounds", 
         "Normal damage and [[1d3]] Con damage and target is fatigued", 
         "Normal damage and target deafened for [[1d4]] hours", 
@@ -964,14 +981,19 @@ on("chat:message", function(msg) {
         "Double damage and target cannot heal naturally for [[1d4]] days",
         "Double damage and target is pushed [[1d6]] squares directly away",
         "Normal damage and target is sickened for [[1d6]] rounds",
-        "Double damage and target can take only one move or standard action next round",
+        "Double damage and target can take only one move or standard action ne"+
+            "xt round",
         "Double damage and target's shield is disarmed",
         "Normal damage and target takes a 20% miss chance for [[1d4]] rounds",
-        "Normal damage and target is unconscious for [[1d4]] rounds (Fort negates)|||Save DC is the result of the confirmation roll",
-        "Normal damage and [[1d2]] Dex damage. Target's base land speed reduced to 10 feet until healed",
+        "Normal damage and target is unconscious for [[1d4]] rounds (Fort nega"+
+            "tes)|||Save DC is the result of the confirmation roll",
+        "Normal damage and [[1d2]] Dex damage. Target's base land speed reduce"+
+            "d to 10 feet until healed",
         "Double damage and [[1d4]] hours of target's memory erased",
-        "Normal damage and [[1d4]] Dex damage. Target's land speed is halved until healed",
-        "Normal damage and target provokes attacks of opportunity from all threatening opponents"
+        "Normal damage and [[1d4]] Dex damage. Target's land speed is halved u"+
+            "ntil healed",
+        "Normal damage and target provokes attacks of opportunity from all thr"+
+            "eatening opponents"
     ];
     var critMagicName = [
         "Time Vortex", "Maximum Effect", "Draining Spell", "Wild Surge", 
@@ -1140,7 +1162,7 @@ on("chat:message", function(msg) {
         "Normal damage and 1 Con and Cha damage. -2 penalty on Perception and ranged attacks until healed",
         "Double damage and [[1d4]] bleed. Target cannot swallow whole",
         "Double damage and target loses flight if it uses wings",
-        "Normal damage and 1 Cha drain. -4 penalty on Listen check until healed",
+        "Normal damage and 1 Cha drain. -4 penalty on Perception checks until healed",
         "Normal damage and target provokes attacks of opportunity from all threatening opponents",
         "Normal damage and [[2d6]] bleed",
         "Normal damage and [[2d6]] bleed. Target cannot talk or breathe while bleeding",
@@ -1798,6 +1820,14 @@ on("chat:message", function(msg) {
         }
     };
 
+    var lootExport = function() {
+        var exp = {};
+        exp.money = state.lootmoney;
+        exp.items = _.without(state.lootpile, '__NONE__');
+        sendChat("Loot Pile", "/w gm Reimport the current loot pile with:<br /"+
+                "><b>!loot add json " + JSON.stringify(exp) + "</b>");
+    };
+
     var lootList = function(gmWhisper) {
         var message = "B|||Loot Pile|||";
         var empty = true;
@@ -1820,6 +1850,9 @@ on("chat:message", function(msg) {
                     empty = false;
                 }
             }
+
+            if(itemcount == 0 && state.lootmoney == 0)
+                message += "The loot pile is empty.";
         }
         if(gmWhisper) sendNextMessageToGm = true;
         sendFormatted(message, {who: "Loot Pile"});
@@ -1941,11 +1974,17 @@ on("chat:message", function(msg) {
                     "Add json specification to loot pile:__BR____B__!loot add"+
                     " json {\"money\": &lt;number&gt;, \"items\": [&lt;string"+
                     "&gt;, &lt;string&gt;, ...]}__EB__|||"+
-                    "Pack remaining loot:__BR____B__!loot pack__EB__", 
+                    "Pack remaining loot:__BR____B__!loot pack__EB__|||"+
+                    "Export current loot pile as a json string:__BR____B__!loo"+
+                    "t export__EB__|||"+
+                    "Whisper current loot pile to gm:__BR____B__!loot gm__EB__", 
                     {who: 'Loot Pile'});
             break;
         case 'gm':
             if(gmState(msg)) lootList(true);
+            break;
+        case 'export':
+            if(gmState(msg)) lootExport();
         }
     }
 });
