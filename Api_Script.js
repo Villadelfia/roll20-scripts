@@ -2135,7 +2135,8 @@ on("chat:message", function(msg) {
         var arrow = ' \u21d2 ';
 
         // Try direct first:
-        if(typeof state.xe[from][to] != 'undefined') {
+        if(typeof state.xe[from][to] != 'undefined' && 
+                state.xe[from][to] != 0) {
             out = value * state.xe[from][to];
             sendFormatted('B|||Conversion|||' + value + ' ' + from + ' equals ' 
                     + out + ' ' + to + '.|||Converted via ' + from + arrow + 
