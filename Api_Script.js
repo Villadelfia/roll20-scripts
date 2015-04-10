@@ -30,6 +30,7 @@ var lastOddTag = "<div style =\"" + lastRowStyle + oddRow + "\">";
 var lastEvenTag = "<div style =\"" + lastRowStyle + evenRow + "\">";
 var endTag = "</div>";
 var sendNextMessageToGm = false;
+var sendNextMessageToGmAndPlayer = false;
 
 String.prototype.contains = function(str, startIndex) {
     return ''.indexOf.call(this, str, startIndex) !== -1;
@@ -43,9 +44,12 @@ String.prototype.endsWith = function(str) {
 
 var sendFormatted = function(message, msg) {
     var toGm = sendNextMessageToGm;
+    var toGmAndPlayer = sendNextMessageToGmAndPlayer;
     sendNextMessageToGm = false;
+    sendNextMessageToGmAndPlayer = false;
 
     var msgcontent = message;
+    var sender = msg.who.split(" ")[0];
 
     // Filter styling.
     msgcontent = msgcontent.replace(new RegExp(/(__B__)(.*?)(__EB__)/ig), "<b>$2</b>");
@@ -207,10 +211,14 @@ var sendFormatted = function(message, msg) {
         ++ctr;
     }
 
-    if(toGm)
+    if(toGm) {
         sendChat(msg.who, "/w gm " + message);
-    else
+    } else if(toGmAndPlayer) {
+        sendChat(msg.who, "/w gm " + message);
+        sendChat(msg.who, "/w " + sender + " " + message);
+    } else {
         sendChat(msg.who, message);
+    }
 };
 
 var sendError = function(error, source) {
@@ -850,7 +858,8 @@ on("chat:message", function(msg) {
         return;
     }
 
-    if(msg.content.startsWith("!gmcard|||") || msg.content.startsWith("!gmcard ") ) {
+    if(msg.content.startsWith("!blindcard|||") || 
+            msg.content.startsWith("!blindcard ") ) {
         var msgcontent = msg.content;
 
         if(msg.inlinerolls) {
@@ -860,11 +869,31 @@ on("chat:message", function(msg) {
             }
         }
 
+        msgcontent = msgcontent.replace("!blindcard|||", "");
+        msgcontent = msgcontent.replace("!blindcard ", "");
+        msgcontent = msgcontent.trim();
+
+        sendNextMessageToGm = true;
+        sendFormatted(msgcontent, msg);
+        return;
+    }
+
+    if(msg.content.startsWith("!gmcard|||") || msg.content.startsWith("!gmcard ") ) {
+        var msgcontent = msg.content;
+
+        if(msg.inlinerolls) {
+            for(var i = 0; i < msg.inlinerolls.length; ++i) {
+                msgcontent = msgcontent.replace("$[[" + i + "]]",
+                    msg.inlinerolls[i].expression + " = [[" +
+                    msg.inlinerolls[i].results.total + "]]");
+            }
+        }
+
         msgcontent = msgcontent.replace("!gmcard|||", "");
         msgcontent = msgcontent.replace("!gmcard ", "");
         msgcontent = msgcontent.trim();
 
-        sendNextMessageToGm = true;
+        sendNextMessageToGmAndPlayer = true;
         sendFormatted(msgcontent, msg);
         return;
     }
@@ -1073,7 +1102,7 @@ on("chat:message", function(msg) {
             _type: "character"
         });
 
-        var output = "{{B}} {{Passive Perception}} ";
+        var output = "{{#3104B4}} {{Passive Perception}} ";
         _.each(players, function(obj) {
             var perception = getAttrByName(obj.id, "Perception");
             if(typeof perception != "undefined" && obj.get("name") != "Template") {
@@ -1090,15 +1119,18 @@ on("chat:message", function(msg) {
             _type: "character"
         });
 
-        var output = "{{B}} {{Saves}} ";
+        var output = "{{#FACC2E;#000000}} {{Saves}} ";
         _.each(players, function(obj) {
             var fort = getAttrByName(obj.id, "Fortitude Save");
             var ref = getAttrByName(obj.id, "Reflex Save");
             var will = getAttrByName(obj.id, "Will Save");
-            if(typeof fort != "undefined" && typeof ref != "undefined" && typeof will != "undefined" &&
+            if(typeof fort != "undefined" && typeof ref != "undefined" && 
+                    typeof will != "undefined" &&
                 obj.get("name") != "Template") {
-                output = output + "{{**" + obj.get("name") + ":**\\n*Fortitude save:* [[1d20+" + fort + "]]" +
-                    "\\n*Reflex save:* [[1d20+" + ref + "]]\\n*Will save:* [[1d20+" + will + "]]}} ";
+                output = output + "{{**" + obj.get("name") + 
+                    ":**\\n\\n*Fortitude save:* [[1d20+" + fort + "]]" +
+                    "\\n*Reflex save:* [[1d20+" + ref + 
+                    "]]\\n*Will save:* [[1d20+" + will + "]]}} ";
             }
         });
 
