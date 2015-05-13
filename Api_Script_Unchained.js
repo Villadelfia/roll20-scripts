@@ -1123,9 +1123,10 @@ on("chat:message", function(msg) {
         var output = "{{#3104B4}} {{Passive Perception}} ";
         _.each(players, function(obj) {
             var perception = getAttrByName(obj.id, "Perception");
-            if(typeof perception != "undefined" && obj.get("name") != "Template" &&
+            var wounds = getAttrByName(obj.id, "Wounded");
+            if(typeof perception != "undefined" && typeof wounds != "undefined" && obj.get("name") != "Template" && 
                 obj.get("archived") == false) {
-                output = output + "{{" + obj.get("name") + ": __R__[[10+" + perception + "]]__ER__}} ";
+                output = output + "{{" + obj.get("name") + ": __R__[[10+" + perception + "+" + wounds + "]]__ER__}} ";
             }
         });
 
@@ -1143,13 +1144,14 @@ on("chat:message", function(msg) {
             var fort = getAttrByName(obj.id, "Fortitude Save");
             var ref = getAttrByName(obj.id, "Reflex Save");
             var will = getAttrByName(obj.id, "Will Save");
+            var wounds = getAttrByName(obj.id, "Wounded");
             if(typeof fort != "undefined" && typeof ref != "undefined" &&
-                typeof will != "undefined" &&
+                typeof will != "undefined" && typeof wounds != "undefined" &&
                 obj.get("name") != "Template" && obj.get("archived") == false) {
                 output = output + "{{**" + obj.get("name") +
-                    ":**\\n\\n*Fortitude save:* __R__[[1d20+" + fort + "]]__ER__" +
-                    "\\n*Reflex save:* __R__[[1d20+" + ref +
-                    "]]__ER__\\n*Will save:* __R__[[1d20+" + will + "]]__ER__}} ";
+                    ":**\\n\\n*Fortitude save:* __R__[[1d20+" + fort + "+" + wounds + "]]__ER__" +
+                    "\\n*Reflex save:* __R__[[1d20+" + ref + "+" + wounds +
+                    "]]__ER__\\n*Will save:* __R__[[1d20+" + will + "+" + wounds + "]]__ER__}} ";
             }
         });
 
@@ -2833,6 +2835,48 @@ on('ready',function() {
         log('--------------------------------------------------------------');
     }
 });
+// }}}
+
+// Pathfinder "Bloodied" {{{
+var bloodied = function(obj, prev) {
+    var val = parseInt(obj.get("bar1_value"));
+    var max = parseInt(obj.get("bar1_max"));
+
+    if(isNaN(val) || isNaN(max))
+        return;
+
+    // Get ID and character this represents.
+    var currId = obj.get("represents") || "";
+    var currChar = getObj("character", currId) || "";
+    var modifiers = findObjs({
+        name:         "wounded",
+        _characterid: currId,
+    }, {caseInsensitive: true});
+    var woundedStatus = "";
+    if(typeof modifiers != "undefined" && modifiers.length != 0) {
+        woundedStatus = modifiers[0];
+    }
+    if(woundedStatus == "" && currChar != "") {
+        woundedStatus = createObj("attribute", {
+            name: "Wounded",
+            current: 0,
+            characterid: currId
+        });
+    }
+
+    if(val <= max/2) {
+        obj.set("status_broken-heart", true);
+        if(woundedStatus != "") {
+            woundedStatus.set("current", "-2");
+        }
+    } else {
+        obj.set("status_broken-heart", false);
+        if(woundedStatus != "") {
+            woundedStatus.set("current", "0");
+        }
+    }
+};
+on('change:token', bloodied);
 // }}}
 
 // Set/SetMax System {{{
