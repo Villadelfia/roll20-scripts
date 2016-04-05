@@ -75,6 +75,18 @@ var sendFormatted = function(message, msg) {
     var messagercv = msgcontent.split("|||");
     if(messagercv.length < 2) return;
 
+    // Default styling.
+    var default_styles = new Array();
+    //                           title bg   title fg   odd bg     odd fg     even bg    even fg
+    default_styles["clavis"] = ["#8E6918", "#FFFFFF", "#B58E3A", "#FFFFFF", "#DAB564", "#FFFFFF"];
+    default_styles["elmyra"] = ["#931100", "#FFFFFF", "#BB220E", "#FFFFFF", "#E63B25", "#FFFFFF"];
+    default_styles["kurin"]  = ["#1F4472", "#FFFFFF", "#355988", "#FFFFFF", "#50739F", "#FFFFFF"];
+    default_styles["lilith"] = ["#9B1E1E", "#FFFFFF", "#BD3F3F", "#FFFFFF", "#E36A6A", "#FFFFFF"];
+    default_styles["shenzi"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
+    default_styles["fidget"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
+    var default_style = default_styles[msg.who.split(' ')[0].toLowerCase()];
+
+
     // Title styling.
     var ctr = 0;
     var changed = 1;
@@ -103,6 +115,11 @@ var sendFormatted = function(message, msg) {
         }
         title = newTitleTag;
         ++ctr;
+    } else if(typeof default_style != 'undefined') {
+        newTitleTag = titleTagB;
+        newTitleTag = newTitleTag.replace("#004", default_style[0]);
+        newTitleTag = newTitleTag.replace("#FFF", default_style[1]);
+        title = newTitleTag;
     }
 
     message = "";
@@ -115,7 +132,7 @@ var sendFormatted = function(message, msg) {
         var condition = messagercv[condctr].match(new RegExp("\\(\\((.+?)\\)\\)", "ig"));
         messagercv[condctr] = messagercv[condctr].replace(new RegExp("\\(\\((.+?)\\)\\)", "ig"), "");
         if(condition && condition.length != 0) {
-            condition = condition[0].substring(2, condition[0].length - 2);
+            condition = condition[0].substring(2, condition[0].length - 2).trim();
 
             // condition now holds the condition to show or not show the segment.
             var elements = condition.split(new RegExp("\\s+?", "ig"));
@@ -212,6 +229,18 @@ var sendFormatted = function(message, msg) {
         if(rowstyle && rowstyle.length > 1) {
             // Foreground.
             tag = tag.replace("; color: #FFF", "; color: " + rowstyle[1]);
+        }
+
+        if((!rowstyle || rowstyle.length == 0) && typeof default_style != 'undefined') {
+            if(ctr % 2 == changed) { // Odd
+                tag = tag.replace("background-color: #000;", "background-color: " + default_style[2] + ";");
+                tag = tag.replace("background-color: #222;", "background-color: " + default_style[2] + ";");
+                tag = tag.replace("; color: #FFF", "; color: " + default_style[3]);
+            } else { // Even
+                tag = tag.replace("background-color: #000;", "background-color: " + default_style[4] + ";");
+                tag = tag.replace("background-color: #222;", "background-color: " + default_style[4] + ";");
+                tag = tag.replace("; color: #FFF", "; color: " + default_style[5]);
+            }
         }
 
         message = message + tag + messagercv[ctr] + endTag;
@@ -367,7 +396,7 @@ on("chat:message", function(msg) {
 
         var item = turnorder.shift();
         if(typeof item.custom == 'string' && item.custom.indexOf("---") !== -1) {
-            sendChat("IR", "/desc " + item.custom);
+            sendChat("", "/desc " + item.custom);
             item.custom = item.custom.replace(/(\d+)/, function(fullMatch, n) {
                 return String(Number(n) + 1);
             });
@@ -436,11 +465,11 @@ on("chat:message", function(msg) {
         var turnorder = [];
         Campaign().set("turnorder", JSON.stringify(turnorder));
         Campaign().set("initiativepage", false);
-        sendChat("IR", "/desc <b>Combat ends.</b>");
+        sendChat("", "/desc <b>Combat ends.</b>");
     };
 
     var init = function() {
-        sendChat("IR", "/desc <b>Combat begins!</b>");
+        sendChat("", "/desc <b>Combat begins!</b>");
         Campaign().set("initiativepage", false);
 
         var currentPageGraphics = findObjs({
@@ -514,7 +543,7 @@ on("chat:message", function(msg) {
         Campaign().set("turnorder", JSON.stringify(turnorder));
         reorder();
         Campaign().set("initiativepage", Campaign().get("playerpageid"));
-        sendChat("IR", "/desc --- ROUND 1 ---");
+        sendChat("", "/desc --- ROUND 1 ---");
     };
 
     if(msg.content.startsWith("!order") && msg.who.contains("(GM)")) {
@@ -2933,6 +2962,69 @@ on("chat:message", function(msg) {
 });
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
+    if(!msg.content.startsWith("!settext ")) return;
+    msg = _.clone(msg);
+    msg.content = msg.content.replace("!settext ", "").trim();
+    var player = msg.playerid;
+    var sender = msg.who.split(" ")[0];
+    var args = msg.content.split(';');
+
+    if(playerIsGM(player))
+        sender = "gm";
+
+    var characters = findObjs({
+        _type: "character",
+        name: msg.who
+    });
+
+    if(typeof characters != "undefined" && characters.length > 0) {
+        var char = characters[0];
+
+        // Check if this player is allowed to edit this character.
+        if(char.get("controlledby").contains("all") || char.get("controlledby").contains(player) || playerIsGM(player)) {
+            var newValue = args[args.length - 1].trim();
+            args.pop();
+            var attrName = args.join(' ').toLowerCase().trim();
+
+            var attributes = findObjs({
+                name: attrName,
+                _characterid: char.get("_id")
+            }, {caseInsensitive: true});
+            var attribute = "";
+            if(typeof attributes != "undefined" && attributes.length != 0) {
+                attribute = attributes[0];
+            }
+
+            if(attribute != "") {
+                if(newValue.contains('/')) {
+                    var values = newValue.split('/');
+                    attribute.set("current", values[0]);
+                    attribute.set("max", values[1]);
+                } else {
+                    attribute.set("current", newValue);
+                }
+                var tokensAffected = findObjs({
+                    _pageid:  Campaign().get("playerpageid"),
+                    _type:    "graphic",
+                    _subtype: "token",
+                    represents: char.get("_id")
+                });
+                if(typeof tokensAffected != "undefined")
+                    _.each(tokensAffected, function(obj) { bloodied(obj, "") });
+                sendChat("Setter", "/w " + sender + " The attribute \"" + attrName + "\" has been set to \"" + newValue
+                    + "\".");
+            } else {
+                sendChat("Setter", "/w " + sender + " No attribute called \"" + attrName + "\" was found.");
+            }
+        } else {
+            sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+        }
+    } else {
+        sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+    }
+});
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
     if(!msg.content.startsWith("!setmax ")) return;
     msg = _.clone(msg);
     msg.content = msg.content.toLowerCase().replace("!setmax ", "").trim();
@@ -3310,5 +3402,1171 @@ on("ready",function(){
     TokenLock.RegisterEventHandlers();
 });
 // }}}
+
+// Path Splitter {{{
+// Implements the commands:
+//   !pathSplit
+//     - Select a pink path and another path, this will delete the pink path and split the other path where they
+//       intersect.
+var MatrixMath = (function() {
+    /**
+     * An NxN square matrix, represented as a 2D array of numbers in column-major
+     * order. For example, mat[3][2] would get the value in column 3 and row 2.
+     * order.
+     * @typedef {number[][]} Matrix
+     */
+
+    /**
+     * An N-degree vector.
+     * @typedef {number[]} Vector
+     */
+
+    /**
+     * Gets the adjugate of a matrix, the tranpose of its cofactor matrix.
+     * @param  {[type]} mat
+     * @return {[type]}
+     */
+    function adjoint(mat) {
+        var cofactorMat = MatrixMath.cofactorMatrix(mat);
+        return MatrixMath.transpose(cofactorMat);
+    }
+
+    /**
+     * Produces a clone of an NxN square matrix.
+     * @param  {Matrix} mat
+     * @return {Matrix}
+     */
+    function clone(mat) {
+        return _.map(mat, function(column) {
+            return _.map(column, function(value) {
+                return value;
+            });
+        });
+    }
+
+    /**
+     * Gets the cofactor of a matrix at a specified column and row.
+     * @param  {Matrix} mat
+     * @param  {uint} col
+     * @param  {uint} row
+     * @return {number}
+     */
+    function cofactor(mat, col, row) {
+        return Math.pow(-1, col+row)*MatrixMath.minor(mat, col, row);
+    }
+
+    /**
+     * Gets the cofactor matrix of a matrix.
+     * @param  {Matrix} mat
+     * @return {Matrix}
+     */
+    function cofactorMatrix(mat) {
+        var result = [];
+        var size = MatrixMath.size(mat);
+        for(var col=0; col<size; col++) {
+            result[col] = [];
+            for(var row=0; row<size; row++) {
+                result[col][row] = MatrixMath.cofactor(mat, col, row);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Gets the determinant of an NxN matrix.
+     * @param  {Matrix} mat
+     * @return {number}
+     */
+    function determinant(mat) {
+        var size = MatrixMath.size(mat);
+
+        if(size === 2)
+            return mat[0][0]*mat[1][1] - mat[1][0]*mat[0][1];
+        else {
+            var sum = 0;
+            for(var col=0; col<size; col++) {
+                sum += mat[col][0] * MatrixMath.cofactor(mat, col, 0);
+            }
+            return sum;
+        }
+    }
+
+    /**
+     * Tests if two matrices are equal.
+     * @param  {Matrix} a
+     * @param  {Matrix} b
+     * @param {number} [tolerance=0]
+     *        If specified, this specifies the amount of tolerance to use for
+     *        each value of the matrices when testing for equality.
+     * @return {boolean}
+     */
+    function equal(a, b, tolerance) {
+        tolerance = tolerance || 0;
+        var sizeA = MatrixMath.size(a);
+        var sizeB = MatrixMath.size(b);
+
+        if(sizeA !== sizeB)
+            return false;
+
+        for(var col=0; col<sizeA; col++) {
+            for(var row=0; row<sizeA; row++) {
+                if(Math.abs(a[col][row] - b[col][row]) > tolerance)
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Produces an identity matrix of some size.
+     * @param  {uint} size
+     * @return {Matrix}
+     */
+    function identity(size) {
+        var mat = [];
+        for(var col=0; col<size; col++) {
+            mat[col] = [];
+            for(var row=0; row<size; row++) {
+                if(row === col)
+                    mat[col][row] = 1;
+                else
+                    mat[col][row] = 0;
+            }
+        }
+        return mat;
+    }
+
+    /**
+     * Gets the inverse of a matrix.
+     * @param  {Matrix} mat
+     * @return {Matrix}
+     */
+    function inverse(mat) {
+        var determinant = MatrixMath.determinant(mat);
+        if(determinant === 0)
+            return undefined;
+
+        var adjoint = MatrixMath.adjoint(mat);
+        var result = [];
+        var size = MatrixMath.size(mat);
+        for(var col=0; col<size; col++) {
+            result[col] = [];
+            for(var row=0; row<size; row++) {
+                result[col][row] = adjoint[col][row]/determinant;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Gets the determinant of a matrix omitting some column and row.
+     * @param  {Matrix} mat
+     * @param  {uint} col
+     * @param  {uint} row
+     * @return {number}
+     */
+    function minor(mat, col, row) {
+        var reducedMat = MatrixMath.omit(mat, col, row);
+        return determinant(reducedMat);
+    }
+
+
+    /**
+     * Returns the matrix multiplication of a*b.
+     * This function works for non-square matrices (and also for transforming
+     * vectors by a matrix).
+     * For matrix multiplication to work, the # of columns in A must be equal
+     * to the # of rows in B.
+     * The resulting matrix will have the same number of rows as A and the
+     * same number of columns as B.
+     * If b was given as a vector, then the result will also be a vector.
+     * @param  {Matrix} a
+     * @param  {Matrix|Vector} b
+     * @return {Matrix|Vector}
+     */
+    function multiply(a, b) {
+        // If a vector is given for b, convert it to a nx1 matrix, where n
+        // is the length of b.
+        var bIsVector = _.isNumber(b[0]);
+        if(bIsVector)
+            b = [b];
+
+        var colsA = a.length;
+        var rowsA = a[0].length;
+        var colsB = b.length;
+        var rowsB = b[0].length;
+        if(colsA !== rowsB)
+            throw new Error('MatrixMath.multiply ERROR: # columns in A must be ' +
+                'the same as the # rows in B. Got A: ' + rowsA + 'x' + colsA +
+                ', B: ' + rowsB + 'x' + colsB + '.');
+
+        var result = [];
+        for(var col=0; col<colsB; col++) {
+            result[col] = [];
+            for(var row=0; row<rowsA; row++) {
+                result[col][row] = 0;
+                for(var i=0; i<colsA; i++) {
+                    result[col][row] += a[i][row] * b[col][i];
+                }
+            }
+        }
+
+        if(bIsVector)
+            result = result[0];
+        return result;
+    }
+
+    /**
+     * Returns a matrix with a column and row omitted.
+     * @param  {Matrix} mat
+     * @param  {uint} col
+     * @param  {uint} row
+     * @return {Matrix}
+     */
+    function omit(mat, col, row) {
+        var result = [];
+
+        var size = MatrixMath.size(mat);
+        for(var i=0; i<size; i++) {
+            if(i === col)
+                continue;
+
+            var column = [];
+            result.push(column);
+            for(var j=0; j<size; j++) {
+                if(j !== row)
+                    column.push(mat[i][j]);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Produces a 2D rotation affine transformation. The direction of the
+     * rotation depends upon the coordinate system.
+     * @param  {number} angle
+     *         The angle, in radians.
+     * @return {Matrix}
+     */
+    function rotate(angle) {
+        var cos = Math.cos(angle);
+        var sin = Math.sin(angle);
+        return [[cos, sin, 0], [-sin, cos, 0], [0,0,1]];
+    }
+
+    /**
+     * Produces a 2D scale affine transformation matrix.
+     * The matrix is used to transform homogenous coordinates, so it is
+     * actually size 3 instead of size 2, despite being used for 2D geometry.
+     * @param  {(number|Vector)} amount
+     *         If specified as a number, then it is a uniform scale. Otherwise,
+     *         it defines a scale by parts.
+     * @return {Matrix}
+     */
+    function scale(amount) {
+        if(_.isNumber(amount))
+            amount = [amount, amount];
+        return [[amount[0], 0, 0], [0, amount[1], 0], [0, 0, 1]];
+    }
+
+    /**
+     * Gets the size N of a NxN square matrix.
+     * @param  {Matrix} mat
+     * @return {uint}
+     */
+    function size(mat) {
+        return mat[0].length;
+    }
+
+    /**
+     * Produces a 2D translation affine transformation matrix.
+     * The matrix is used to transform homogenous coordinates, so it is
+     * actually size 3 instead of size 2, despite being used for 2D geometry.
+     * @param  {Vector} vec
+     * @return {Matrix}
+     */
+    function translate(vec) {
+        return [[1,0,0], [0,1,0],[vec[0], vec[1], 1]];
+    }
+
+    /**
+     * Returns the transpose of a matrix.
+     * @param  {Matrix} mat
+     * @return {Matrix}
+     */
+    function transpose(mat) {
+        var result = [];
+
+        var size = MatrixMath.size(mat);
+        for(var col=0; col<size; col++) {
+            result[col] = [];
+            for(var row=0; row<size; row++) {
+                result[col][row] = mat[row][col];
+            }
+        }
+        return result;
+    }
+
+
+    return {
+        adjoint: adjoint,
+        clone: clone,
+        cofactor: cofactor,
+        cofactorMatrix: cofactorMatrix,
+        determinant: determinant,
+        equal: equal,
+        identity: identity,
+        inverse: inverse,
+        minor: minor,
+        multiply: multiply,
+        omit: omit,
+        rotate: rotate,
+        scale: scale,
+        size: size,
+        translate: translate,
+        transpose: transpose
+    };
+})();
+var PathMath = (function() {
+
+    /**
+     * A vector used to define a homogeneous point or a direction.
+     * @typedef {number[]} Vector
+     */
+
+    /**
+     * A line segment defined by two homogeneous 2D points.
+     * @typdef {Vector[]} Segment
+     */
+
+    /**
+     * A simple class for BoundingBoxes.
+     * @param {Number} left
+     * @param {Number} top
+     * @param {Number} width
+     * @param {Number} height
+     */
+    function BoundingBox(left, top, width, height) {
+        this.left = left;
+        this.top = top;
+        this.width = width;
+        this.height = height;
+    };
+
+    /**
+     * Calculates the bounding box for a list of paths.
+     * @param {Path | Path[]} paths
+     * @return {BoundingBox}
+     */
+    function getBoundingBox(paths) {
+        if(!_.isArray(paths))
+            paths = [paths];
+
+        var result;
+        _.each(paths, function(p) {
+            var pBox = _getSingleBoundingBox(p);
+            if(result)
+                result = _addBoundingBoxes(result, pBox);
+            else
+                result = pBox;
+        });
+        return result;
+    };
+
+    /**
+     * Returns the center of the bounding box countaining a path or list
+     * of paths. The center is returned as a 2D homongeneous point
+     * (It has a third component which is always 1 which is helpful for
+     * affine transformations).
+     * @param {(Path|Path[])} paths
+     * @return {Vector}
+     */
+    function getCenter(paths) {
+        if(!_.isArray(pathjs))
+            paths = [paths];
+
+        var bbox = getBoundingBox(paths);
+        var cx = bbox.left + bbox.width/2;
+        var cy = bbox.top + bbox.height/2;
+
+        return [cx, cy, 1];
+    };
+
+    /**
+     * @private
+     * Calculates the bounding box for a single path.
+     * @param  {Path} path
+     * @return {BoundingBox}
+     */
+    function _getSingleBoundingBox(path) {
+        var width = path.get('width')*path.get('scaleX');
+        var height = path.get('height')*path.get('scaleY');
+        var left = path.get('left') - width/2;
+        var top = path.get('top') - height/2;
+
+        return new BoundingBox(left, top, width, height);
+    };
+
+    /**
+     * @private
+     * Adds two bounding boxes.
+     * @param  {BoundingBox} a
+     * @param  {BoundingBox} b
+     * @return {BoundingBox}
+     */
+    function _addBoundingBoxes(a, b) {
+        var left = Math.min(a.left, b.left);
+        var top = Math.min(a.top, b.top);
+        var right = Math.max(a.left + a.width, b.left + b.width);
+        var bottom = Math.max(a.top + a.height, b.top + b.height);
+
+        return new BoundingBox(left, top, right - left, bottom - top);
+    };
+
+    /**
+     * Produces a merged path string from a list of path objects.
+     * @param {Path[]} paths
+     * @return {String}
+     */
+    function mergePathStr(paths) {
+        var merged = [];
+        var bbox = getBoundingBox(paths);
+
+        _.each(paths, function(p) {
+            var pbox = getBoundingBox(p);
+
+            var parsed = JSON.parse(p.get('_path'));
+            _.each(parsed, function(pathTuple, index) {
+                var dx = pbox.left - bbox.left;
+                var dy = pbox.top - bbox.top;
+                var sx = p.get('scaleX');
+                var sy = p.get('scaleY');
+
+                // Bezier curve tuple
+                if(pathTuple[0] == 'Q') {
+                    var cx = pathTuple[1]*sx + dx;
+                    var cy = pathTuple[2]*sy + dy;
+                    var x = pathTuple[3]*sx + dx;
+                    var y = pathTuple[4]*sy + dy;
+                    merged.push([pathTuple[0], cx, cy, x, y]);
+                }
+
+                // Move and Line tuples
+                else {
+                    var x = pathTuple[1]*sx + dx;
+                    var y = pathTuple[2]*sy + dy;
+                    merged.push([pathTuple[0], x, y]);
+                }
+            });
+        });
+
+        return JSON.stringify(merged);
+    };
+
+    /**
+     * Reproduces the data for a polygonal path such that the scales are 1 and
+     * its rotate is 0.
+     * @param {Path}
+     * @return {PathData}
+     */
+    function normalizePath(path) {
+        var segments = toSegments(path);
+        return segmentsToPath(segments);
+    }
+
+    /**
+     * Produces the data for creating a path from a list of segments forming a
+     * continuous path.
+     * @param {Segment[]}
+     * @return {PathData}
+     */
+    function segmentsToPath(segments) {
+        var left = segments[0][0][0];
+        var right = segments[0][0][0];
+        var top = segments[0][0][1];
+        var bottom = segments[0][0][1];
+
+        // Get the bounds of the segment.
+        var pts = [];
+        var isFirst = true;
+        _.each(segments, function(segment) {
+            var p1 = segment[0];
+            if(isFirst) {
+                isFirst = false;
+                pts.push(p1);
+            }
+
+            var p2 = segment[1];
+
+            left = Math.min(left, p1[0], p2[0]);
+            right = Math.max(right, p1[0], p2[0]);
+            top = Math.min(top, p1[1], p2[1]);
+            bottom = Math.max(bottom, p1[1], p2[1]);
+
+            pts.push(p2);
+        });
+
+        // Get the path's left and top coordinates.
+        var width = right-left;
+        var height = bottom-top;
+        var cx = left + width/2;
+        var cy = top + height/2;
+
+        // Convert the points to a _path.
+        var _path = [];
+        var firstPt = true;
+        _.each(pts, function(pt) {
+            var type = 'L';
+            if(firstPt) {
+                type = 'M';
+                firstPt = false;
+            }
+            _path.push([type, pt[0]-left, pt[1]-top]);
+        });
+
+        return {
+            _path: JSON.stringify(_path),
+            left: cx,
+            top: cy,
+            width: width,
+            height: height
+        };
+    }
+
+    /**
+     * Converts a path into a list of line segments. As the nature of this
+     * method suggests, this does not work to convert quadratic paths
+     * (for freehand paths) or cubic paths (for oval paths).
+     */
+    function toSegments(path) {
+        var _path = JSON.parse(path.get('_path'));
+        var scaleX = path.get('scaleX');
+        var scaleY = path.get('scaleY');
+        var angle = path.get('rotation')/180*Math.PI;
+
+        // The transformed center of the path.
+        var cx = path.get('left');
+        var cy = path.get('top');
+
+        // The untransformed width and height.
+        var width = path.get('width');
+        var height = path.get('height');
+
+        var segments = [];
+        var prevPt;
+
+        _.each(_path, function(tuple) {
+            var type = tuple[0];
+
+            // The point in path coordinates, relative to the path center.
+            var x = tuple[1] - width/2;
+            var y = tuple[2] - height/2;
+            var pt = [x,y,1];
+
+            // The transform of the point from path coordinates to map
+            // coordinates.
+            var scale = MatrixMath.scale([scaleX, scaleY]);
+            var rotate = MatrixMath.rotate(angle);
+            var transform = MatrixMath.translate([cx, cy]);
+            transform = MatrixMath.multiply(transform, rotate);
+            transform = MatrixMath.multiply(transform, scale);
+
+            pt = MatrixMath.multiply(transform, pt);
+
+            // If we have an 'L' type point, then add the segment.
+            // Either way, keep track of the point we've moved to.
+            if(type === 'L')
+                segments.push([prevPt, pt]);
+            prevPt = pt;
+        });
+
+        return segments;
+    }
+
+    on('chat:message', function(msg) {
+        if(msg.type === 'api' && msg.content.indexOf('!pathInfo')  === 0) {
+            log('!pathInfo');
+
+            try {
+                var path = findObjs({
+                    _type: 'path',
+                    _id: msg.selected[0]._id
+                })[0];
+                log(path);
+                log(path.get('_path'));
+
+                var segments = toSegments(path);
+                log('Segments: ');
+                log(segments);
+
+                var pathData = segmentsToPath(segments);
+                log('New path data: ');
+                log(pathData);
+
+                var curPage = path.get('_pageid');
+                _.extend(pathData, {
+                    stroke: '#ff0000',
+                    _pageid: curPage,
+                    layer: path.get('layer')
+                });
+
+                var newPath = createObj('path', pathData);
+                log(newPath);
+            }
+            catch(err) {
+                log('Lines ERROR: ', err.message)
+            }
+
+        }
+    });
+
+    return {
+        BoundingBox: BoundingBox,
+        getBoundingBox: getBoundingBox,
+        getCenter: getCenter,
+        mergePathStr: mergePathStr,
+        normalizePath: normalizePath,
+        segmentsToPath: segmentsToPath,
+        toSegments: toSegments
+    };
+})();
+var VecMath = (function() {
+
+    /**
+     * Adds two vectors.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var add = function(a, b) {
+        var result = [];
+        for(var i=0; i<a.length; i++) {
+            result[i] = a[i] + b[i];
+        }
+        return result;
+    };
+
+
+    /**
+     * Creates a cloned copy of a vector.
+     * @param {vec} v
+     * @return {vec}
+     */
+    var clone = function(v) {
+        var result = [];
+        for(var i=0; i < v.length; i++) {
+            result.push(v[i]);
+        }
+        return result;
+    };
+
+
+    /**
+     * Returns an array representing the cross product of two 3D vectors.
+     * @param {vec3} a
+     * @param {vec3} b
+     * @return {vec3}
+     */
+    var cross = function(a, b) {
+        var x = a[1]*b[2] - a[2]*b[1];
+        var y = a[2]*b[0] - a[0]*b[2];
+        var z = a[0]*b[1] - a[1]*b[0];
+        return [x, y, z];
+    };
+
+
+    /**
+     * Returns the degree of a vector - the number of dimensions it has.
+     * @param {vec} vector
+     * @return {int}
+     */
+    var degree = function(vector) {
+        return vector.length;
+    };
+
+
+    /**
+     * Computes the distance between two points.
+     * @param {vec} pt1
+     * @param {vec} pt2
+     * @return {number}
+     */
+    var dist = function(pt1, pt2) {
+        var v = vec(pt1, pt2);
+        return length(v);
+    };
+
+
+    /**
+     * Returns the dot product of two vectors.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {number}
+     */
+    var dot = function(a, b) {
+        var result = 0;
+        for(var i = 0; i < a.length; i++) {
+            result += a[i]*b[i];
+        }
+        return result;
+    };
+
+
+    /**
+     * Tests if two vectors are equal.
+     * @param {vec} a
+     * @param {vec} b
+     * @param {float} [tolerance] A tolerance threshold for comparing vector
+     *                            components.
+     * @return {boolean} true iff the each of the vectors' corresponding
+     *                  components are equal.
+     */
+    var equal = function(a, b, tolerance) {
+        if(a.length != b.length)
+            return false;
+
+        for(var i=0; i<a.length; i++) {
+            if(tolerance !== undefined) {
+                if(Math.abs(a[i] - b[i]) > tolerance) {
+                    return false;
+                }
+            }
+            else if(a[i] != b[i])
+                return false;
+        }
+        return true;
+    };
+
+
+
+    /**
+     * Returns the length of a vector.
+     * @param {vec} vector
+     * @return {number}
+     */
+    var length = function(vector) {
+        var length = 0;
+        for(var i=0; i < vector.length; i++) {
+            length += vector[i]*vector[i];
+        }
+        return Math.sqrt(length);
+    };
+
+
+
+    /**
+     * Computes the normalization of a vector - its unit vector.
+     * @param {vec} v
+     * @return {vec}
+     */
+    var normalize = function(v) {
+        var vHat = [];
+
+        var vLength = length(v);
+        for(var i=0; i < v.length; i++) {
+            vHat[i] = v[i]/vLength;
+        }
+
+        return vHat;
+    };
+
+
+    /**
+     * Computes the projection of vector b onto vector a.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var projection = function(a, b) {
+        var scalar = scalarProjection(a, b);
+        var aHat = normalize(a);
+
+        return scale(aHat, scalar);
+    };
+
+
+    /**
+     * Computes the distance from a point to an infinitely stretching line.
+     * Works for either 2D or 3D points.
+     * @param {vec2 || vec3} pt
+     * @param {vec2 || vec3} linePt1   A point on the line.
+     * @param {vec2 || vec3} linePt2   Another point on the line.
+     * @return {number}
+     */
+    var ptLineDist = function(pt, linePt1, linePt2) {
+        var a = vec(linePt1, linePt2);
+        var b = vec(linePt1, pt);
+
+        // Make 2D vectors 3D to compute the cross product.
+        if(!a[2])
+            a[2] = 0;
+        if(!b[2])
+            b[2] = 0;
+
+        var aHat = normalize(a);
+        var aHatCrossB = cross(aHat, b);
+        return length(aHatCrossB);
+    };
+
+
+    /**
+     * Computes the distance from a point to a line segment.
+     * Works for either 2D or 3D points.
+     * @param {vec2 || vec3} pt
+     * @param {vec2 || vec3} linePt1   The start point of the segment.
+     * @param {vec2 || vec3} linePt2   The end point of the segment.
+     * @return {number}
+     */
+    var ptSegDist = function(pt, linePt1, linePt2) {
+        var a = vec(linePt1, linePt2);
+        var b = vec(linePt1, pt);
+        var aDotb = dot(a,b);
+
+        // Is pt behind linePt1?
+        if(aDotb < 0) {
+            return length(vec(pt, linePt1));
+        }
+
+        // Is pt after linePt2?
+        else if(aDotb > dot(a,a)) {
+            return length(vec(pt, linePt2));
+        }
+
+        // Pt must be between linePt1 and linePt2.
+        else {
+            return ptLineDist(pt, linePt1, linePt2);
+        }
+    };
+
+
+    /**
+     * Computes the scalar projection of b onto a.
+     * @param {vec2} a
+     * @param {vec2} b
+     * @return {vec2}
+     */
+    var scalarProjection = function(a, b) {
+        var aDotB = dot(a, b);
+        var aLength = length(a);
+
+        return aDotB/aLength;
+    };
+
+
+
+    /**
+     * Computes a scaled vector.
+     * @param {vec2} v
+     * @param {number} scalar
+     * @return {vec2}
+     */
+    var scale = function(v, scalar) {
+        var result = [];
+
+        for(var i=0; i<v.length; i++) {
+            result[i] = v[i]*scalar;
+        }
+        return result;
+    };
+
+
+    /**
+     * Computes the difference of two vectors.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var sub = function(a, b) {
+        var result = [];
+        for(var i=0; i<a.length; i++) {
+            result.push(a[i] - b[i]);
+        }
+        return result;
+    };
+
+
+    /**
+     * Returns the vector from pt1 to pt2.
+     * @param {vec} pt1
+     * @param {vec} pt2
+     * @return {vec}
+     */
+    var vec = function(pt1, pt2) {
+        var result = [];
+        for(var i=0; i<pt1.length; i++) {
+            result.push( pt2[i] - pt1[i] );
+        }
+
+        return result;
+    };
+
+
+    // The exposed API.
+    return {
+        add: add,
+        clone: clone,
+        cross: cross,
+        degree: degree,
+        dist: dist,
+        dot: dot,
+        equal: equal,
+        length: length,
+        normalize: normalize,
+        projection: projection,
+        ptLineDist: ptLineDist,
+        ptSegDist: ptSegDist,
+        scalarProjection: scalarProjection,
+        scale: scale,
+        sub: sub,
+        vec: vec
+    };
+})();
+(function() {
+    /**
+     * A 3-tuple representing a point of intersection between two line segments.
+     * The first element is a Vector representing the point of intersection in
+     * 2D homogenous coordinates.
+     * The second element is the parametric coefficient for the intersection
+     * along the first segment.
+     * The third element is the parametric coefficient for the intersection
+     * along the second segment.
+     * @typedef {Array} Intersection
+     */
+
+    /**
+     * A vector used to define a homogeneous point or a direction.
+     * @typedef {number[]} Vector
+     */
+
+    /**
+     * A line segment defined by two homogenous 2D points.
+     * @typdef {Vector[]} Segment
+     */
+
+
+        // Initialize the script's state if it hasn't already been initialized.
+    state.PathSplitter = state.PathSplitter || {
+        splitPathColor: '#ff00ff' // pink
+    };
+
+
+    function _getSplitSegmentPaths(mainSegments, splitSegments) {
+        var resultSegPaths = [];
+        var curPathSegs = [];
+
+        _.each(mainSegments, function(seg1) {
+
+            // Find the points of intersection and their parametric coefficients.
+            var intersections = [];
+            _.each(splitSegments, function(seg2) {
+                var i = _segmentIntersection(seg1, seg2);
+                if(i)
+                    intersections.push(i);
+            });
+
+            if(intersections.length > 0) {
+                // Sort the intersections in the order that they appear along seg1.
+                intersections.sort(function(a, b) {
+                    return a[1] - b[1];
+                });
+
+                var lastPt = seg1[0];
+                _.each(intersections, function(i) {
+                    // Complete the current segment path.
+                    curPathSegs.push([lastPt, i[0]]);
+                    resultSegPaths.push(curPathSegs);
+
+                    // Start a new segment path.
+                    curPathSegs = [];
+                    lastPt = i[0];
+                });
+                curPathSegs.push([lastPt, seg1[1]]);
+            }
+            else {
+                curPathSegs.push(seg1);
+            }
+        });
+        resultSegPaths.push(curPathSegs);
+
+        return resultSegPaths;
+    };
+
+    /**
+     * Computes the intersection between two homogenous 2D line segments,
+     * if it exists.
+     *
+     * Explanation of the fancy mathemagics:
+     * Let A be the first point in seg1 and B be the second point in seg1.
+     * Let C be the first point in seg2 and D be the second point in seg2.
+     * Let U be the vector from A to B.
+     * Let V be the vector from C to D.
+     *
+     * Observe that if the dot product of U and V is 1 or -1, then
+     * seg1 and seg2 are parallel, so they will either never intersect or they
+     * will overlap. We will ignore the case where seg1 and seg2 are parallel.
+     *
+     * We can represent any point P along the line projected by seg1 as
+     * P = A + SU, where S is some scalar value such that S = 0 yeilds A,
+     * S = 1 yields B, and P is on seg1 if and only if 0 <= S <= 1.
+     *
+     * We can also represent any point Q along the line projected by seg2 as
+     * Q = C + TV, where T is some scalar value such that T = 0 yeilds C,
+     * T = 1 yields D, and Q is on seg2 if and only if 0 <= T <= 1.
+     *
+     * Assume that seg1 and seg2 are not parallel and that their
+     * projected lines intersect at some point P.
+     * Therefore, we have A + SU = C + TV.
+     *
+     * We can rearrange this such that we have C - A = SU - TV.
+     * Let vector W = C - A, thus W = SU - TV.
+     * Also, let coeffs = [S, T, 1].
+     *
+     * We can now represent this system of equations as the matrix
+     * multiplication problem W = M * coeffs, where in column-major
+     * form, M = [U, -V, [0,0,1]].
+     *
+     * By matrix-multiplying both sides by M^-1, we get
+     * M^-1 * W = M^-1 * M * coeffs = coeffs, from which we can extract the
+     * values for S and T.
+     *
+     * We can now get the point of intersection on the projected lines of seg1
+     * and seg2 by substituting S in P = A + SU or T in Q = C + TV.
+     * Seg1 and seg2 also intersect at that point if and only if 0 <= S, T <= 1.
+     *
+     * @param {Segment} seg1
+     * @param {Segment} seg2
+     * @return {Intersection}
+     *      The point of intersection in homogenous 2D coordiantes and its
+     *      parametric coefficients along seg1 and seg2,
+     *      or undefined if the segments are parallel.
+     */
+    function _segmentIntersection(seg1, seg2) {
+        var u = VecMath.sub(seg1[1], seg1[0]);
+        var v = VecMath.sub(seg2[1], seg2[0]);
+        var w = VecMath.sub(seg2[0], seg1[0]);
+
+        // Can't use 0-length vectors.
+        if(VecMath.length(u) === 0 || VecMath.length(v) === 0)
+            return undefined;
+
+        // If the two segments are parallel, then either they never intersect
+        // or they overlap. Either way, return undefined in this case.
+        var uvDot = VecMath.dot(u,v);
+        if(Math.abs(uvDot) === 1)
+            return undefined;
+
+        // Build the inverse matrix for getting the intersection point's
+        // parametric coefficients along the projected segments.
+        var m = [[u[0], u[1], 0], [-v[0], -v[1], 0], [0, 0, 1]];
+        var mInv = MatrixMath.inverse(m);
+
+        // Get the parametric coefficients for getting the point of intersection
+        // on the projected semgents.
+        var coeffs = MatrixMath.multiply(mInv, w);
+        var s = coeffs[0];
+        var t = coeffs[1];
+
+        // Return the intersection only if it lies on both the segments.
+        if(s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+            var uPrime = VecMath.scale(u, s);
+            return [VecMath.add(seg1[0], uPrime), s, t];
+        }
+        else
+            return undefined;
+    };
+
+    /**
+     * Splits mainPath at its intersections with splitPath. The original path
+     * is removed, being replaced by the new split up paths.
+     * @param {Path} mainPath
+     * @param {Path} splitPath
+     * @return {Path[]}
+     */
+    function splitPathAtIntersections(mainPath, splitPath) {
+        var mainSegments = PathMath.toSegments(mainPath);
+        var splitSegments = PathMath.toSegments(splitPath);
+        var segmentPaths = _getSplitSegmentPaths(mainSegments, splitSegments);
+
+        // Convert the list of segment paths into paths.
+        var _pageid = mainPath.get('_pageid');
+        var controlledby = mainPath.get('controlledby');
+        var fill = mainPath.get('fill');
+        var layer = mainPath.get('layer');
+        var stroke = mainPath.get('stroke');
+        var stroke_width = mainPath.get('stroke_width');
+
+        var results = [];
+        _.each(segmentPaths, function(segments) {
+            var pathData = PathMath.segmentsToPath(segments);
+            _.extend(pathData, {
+                _pageid: _pageid,
+                controlledby: controlledby,
+                fill: fill,
+                layer: layer,
+                stroke: stroke,
+                stroke_width: stroke_width
+            });
+            var path = createObj('path', pathData);
+            results.push(path);
+        });
+
+        // Remove the original path and the splitPath.
+        mainPath.remove();
+        splitPath.remove();
+
+        return results;
+    }
+
+    on('chat:message', function(msg) {
+        if(msg.type === 'api' && msg.content.indexOf('!pathSplitColor') === 0) {
+            try {
+                var selected = msg.selected;
+                var path = findObjs({
+                    _type: 'path',
+                    _id: selected[0]._id
+                })[0];
+
+                var stroke = path.get('stroke');
+                state.PathSplitter.splitPathColor = stroke;
+            }
+            catch(err) {
+                log('!pathSplitColor ERROR: ', err.message)
+            }
+        }
+        else if(msg.type === 'api' && msg.content.indexOf('!pathSplit')  === 0) {
+            try {
+                var selected = msg.selected;
+                var path1 = findObjs({
+                    _type: 'path',
+                    _id: selected[0]._id
+                })[0];
+                var path2 = findObjs({
+                    _type: 'path',
+                    _id: selected[1]._id
+                })[0];
+
+                // Determine which path is the main path and which is the
+                // splitting path.
+                var mainPath, splitPath;
+                if(path1.get('stroke') === state.PathSplitter.splitPathColor) {
+                    mainPath = path2;
+                    splitPath = path1;
+                }
+                else if(path2.get('stroke') === state.PathSplitter.splitPathColor) {
+                    mainPath = path1;
+                    splitPath = path2;
+                }
+                else {
+                    throw new Error('No splitting path selected.');
+                }
+                var newPaths = splitPathAtIntersections(mainPath, splitPath);
+            }
+            catch(err) {
+                log('!pathSplit ERROR: ', err.message)
+            }
+        }
+    });
+})();
+//}}}
 
 // vim: fdm=marker
