@@ -38,6 +38,11 @@ String.prototype.startsWith = function(str) {
 String.prototype.endsWith = function(str) {
     return this.slice(-str.length) == str;
 };
+Math.hammingWeight = function(i) {
+    i = i - ((i >> 1) & 0x55555555);
+    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+    return ((i + (i >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+};
 
 var sendFormatted = function(message, msg) {
     var toGm = sendNextMessageToGm;
@@ -141,10 +146,9 @@ var sendFormatted = function(message, msg) {
                 var r = parseInt(elements[2]);
                 if(isNaN(l) || isNaN(r)) continue;
                 var deleted = false;
-                switch(elements[1]) {
+                switch(elements[1].toLowerCase()) {
                     case ">":
                     case "gt":
-                    case "GT":
                         if(l <= r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -152,7 +156,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case ">=":
                     case "ge":
-                    case "GE":
                         if(l < r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -160,7 +163,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case "<":
                     case "lt":
-                    case "LT":
                         if(l >= r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -168,7 +170,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case "<=":
                     case "le":
-                    case "LE":
                         if(l > r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -177,9 +178,7 @@ var sendFormatted = function(message, msg) {
                     case "=":
                     case "==":
                     case "e":
-                    case "E":
                     case "eq":
-                    case "EQ":
                         if(l != r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -188,10 +187,52 @@ var sendFormatted = function(message, msg) {
                     case "!=":
                     case "=/=":
                     case "ne":
-                    case "NE":
                     case "neq":
-                    case "NEQ":
                         if(l == r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "binand":
+                    case "and":
+                        if(!(l & r)) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "binor":
+                    case "or":
+                        if(!(l | r)) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwgt":
+                        if(Math.hammingWeight(l) <= r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwge":
+                        if(Math.hammingWeight(l) < r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwlt":
+                        if(Math.hammingWeight(l) >= r || l == 0) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwle":
+                        if(Math.hammingWeight(l) > r || l == 0) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hw":
+                        if(Math.hammingWeight(l) != r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
                         }

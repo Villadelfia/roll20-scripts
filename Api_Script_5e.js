@@ -16,8 +16,8 @@ var rowStyle = " padding: 5px; border-left: 1px solid #000; border-right: 1px "+
 var lastRowStyle = " padding: 5px; border-left: 1px solid #000; border-bottom:"+
     " 1px solid #000; border-right: 1px solid #000; border-radius: 0px 0px 5p"+
     "x 5px; ";
-var oddRow = " background-color: #000; color: #FFF;";
-var evenRow = " background-color: #222; color: #FFF;";
+var oddRow = " background: #000; color: #FFF;";
+var evenRow = " background: #222; color: #FFF;";
 var titleTagR = "<div style =\"" + titleStyleR + "\">";
 var titleTagG = "<div style =\"" + titleStyleG + "\">";
 var titleTagB = "<div style =\"" + titleStyleB + "\">";
@@ -89,8 +89,8 @@ var sendFormatted = function(message, msg) {
     default_styles["lilith"] = ["#9B1E1E", "#FFFFFF", "#BD3F3F", "#FFFFFF", "#E36A6A", "#FFFFFF"];
     default_styles["shenzi"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
     default_styles["fidget"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
+    default_styles["gm"] =     ["#931100", "#FFFFFF", "#BB220E", "#FFFFFF", "#E63B25", "#FFFFFF"];
     var default_style = default_styles[msg.who.split(' ')[0].toLowerCase()];
-
 
     // Title styling.
     var ctr = 0;
@@ -263,8 +263,8 @@ var sendFormatted = function(message, msg) {
         messagercv[ctr] = messagercv[ctr].replace(/#[0-9A-F]{6}/ig, "");
         if(rowstyle && rowstyle.length != 0) {
             // Background.
-            tag = tag.replace("background-color: #000;", "background-color: " + rowstyle[0] + ";");
-            tag = tag.replace("background-color: #222;", "background-color: " + rowstyle[0] + ";");
+            tag = tag.replace("background: #000;", "background: " + rowstyle[0] + ";");
+            tag = tag.replace("background: #222;", "background: " + rowstyle[0] + ";");
         }
 
         if(rowstyle && rowstyle.length > 1) {
@@ -274,12 +274,12 @@ var sendFormatted = function(message, msg) {
 
         if((!rowstyle || rowstyle.length == 0) && typeof default_style != 'undefined') {
             if(ctr % 2 == changed) { // Odd
-                tag = tag.replace("background-color: #000;", "background-color: " + default_style[2] + ";");
-                tag = tag.replace("background-color: #222;", "background-color: " + default_style[2] + ";");
+                tag = tag.replace("background: #000;", "background: " + default_style[2] + ";");
+                tag = tag.replace("background: #222;", "background: " + default_style[2] + ";");
                 tag = tag.replace("; color: #FFF", "; color: " + default_style[3]);
             } else { // Even
-                tag = tag.replace("background-color: #000;", "background-color: " + default_style[4] + ";");
-                tag = tag.replace("background-color: #222;", "background-color: " + default_style[4] + ";");
+                tag = tag.replace("background: #000;", "background: " + default_style[4] + ";");
+                tag = tag.replace("background: #222;", "background: " + default_style[4] + ";");
                 tag = tag.replace("; color: #FFF", "; color: " + default_style[5]);
             }
         }
@@ -429,10 +429,11 @@ on("chat:message", function(msg) {
 
     var nextTurn = function() {
         var turnorder;
-        if(Campaign().get("turnorder") == "") turnorder = "";
-        else turnorder = JSON.parse(Campaign().get("turnorder"));
+        if(Campaign().get("turnorder") == "") turnorder = ""; else turnorder =
+            JSON.parse(Campaign().get("turnorder"));
 
-        if(turnorder == "") return;
+        if(turnorder == "")
+            return;
 
         var item = turnorder.shift();
         if(typeof item.custom == 'string' && item.custom.indexOf("---") !== -1) {
@@ -516,7 +517,7 @@ on("chat:message", function(msg) {
             _pageid:  Campaign().get("playerpageid"),
             _type:    "graphic",
             _subtype: "token",
-            _layer:   "objects"
+            _layer:   "objects",
         });
 
         var turnorder = [];
@@ -527,7 +528,8 @@ on("chat:message", function(msg) {
 
             var objId = obj.get("_id");
             var currentModifier = 0;
-            var isMonster = 0;
+            var totalValue = 0;
+            var diceRoll = randomInteger(20);
 
             var addToInitiative = true;
 
@@ -535,35 +537,41 @@ on("chat:message", function(msg) {
             if(currChar.length != 0) {
                 // Set the modifier.
                 var mod = findObjs({
-                    name:         "dex",
-                    _characterid: currId
-                });
-
+                    name:         "initiative",
+                    _characterid: currId,
+                }, {caseInsensitive: true});
                 if(mod.length != 0) {
                     currentModifier = parseInt(mod[0].get("current"));
                     if(isNaN(currentModifier)) currentModifier = 0;
                 }
 
                 // Set the roll result and give feedback.
-                sendChat("character|" + currId, "/me has " + currentModifier + " dexterity!");
+                totalValue = diceRoll + currentModifier;
+                var printableModifier = (currentModifier >= 0 ? "+" +
+                    currentModifier : currentModifier);
+                sendChat("character|" + currId, "/me rolls " + totalValue +
+                    " (1d20(" + diceRoll + ")" + printableModifier +
+                    ") for initiative!");
                 // For NPC tokens.
             } else {
                 // Set the modifier.
                 currentModifier = obj.get("bar3_value") || "";
                 currentModifier = parseInt(currentModifier);
-                isMonster = 1;
                 if(isNaN(currentModifier)) {
                     currentModifier = 0;
                     addToInitiative = false;
                 }
+
+                // Set the roll result.
+                totalValue = diceRoll + currentModifier;
             }
 
             // Push the value.
             if(addToInitiative) {
                 turnorder.push({
                     id:     objId,
-                    pr:     currentModifier,
-                    custom: isMonster
+                    pr:     totalValue,
+                    custom: currentModifier,
                 });
             }
         });
@@ -571,7 +579,7 @@ on("chat:message", function(msg) {
         turnorder.push({
             id:     "-1",
             pr:     "-999",
-            custom: "--- ROUND 2 ---"
+            custom: "--- ROUND 2 ---",
         });
         Campaign().set("turnorder", JSON.stringify(turnorder));
         reorder();
@@ -605,12 +613,333 @@ on("chat:message", function(msg) {
 });
 // }}}
 
+// Template manager {{{
+// Implements the commands:
+//   !t
+//   !template
+//     - Allows a player to summon a template token, they must exist somewhere
+//       obviously.
+//     - The token gets placed on the first selected token, if any, or in the
+//       top right of the map.
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    msg = _.clone(msg);
+    var sender = msg.who.split(" ")[0];
+
+    if(msg.content == "!t" || msg.content == "!template") {
+        sendChat("Template Spawner", "/w " + sender +
+            " Usage:<br/>!t [15|30|60] cone<br/>!t [5|10|15|20|30|40] burst");
+        return;
+    }
+
+    if(msg.content.startsWith("!t ") || msg.content.startsWith("!template ")) {
+        // Get master template tokens.
+        var cone_15 = findObjs({
+            _type: "graphic",
+            name:  "cone_15_template_master",
+        })[0];
+        var cone_15_ortho = findObjs({
+            _type: "graphic",
+            name:  "cone_15_ortho_template_master",
+        })[0];
+        var cone_30 = findObjs({
+            _type: "graphic",
+            name:  "cone_30_template_master",
+        })[0];
+        var cone_30_ortho = findObjs({
+            _type: "graphic",
+            name:  "cone_30_ortho_template_master",
+        })[0];
+        var cone_60 = findObjs({
+            _type: "graphic",
+            name:  "cone_60_template_master",
+        })[0];
+        var cone_60_ortho = findObjs({
+            _type: "graphic",
+            name:  "cone_60_ortho_template_master",
+        })[0];
+        var burst_5 = findObjs({
+            _type: "graphic",
+            name:  "burst_5_template_master",
+        })[0];
+        var burst_10 = findObjs({
+            _type: "graphic",
+            name:  "burst_10_template_master",
+        })[0];
+        var burst_15 = findObjs({
+            _type: "graphic",
+            name:  "burst_15_template_master",
+        })[0];
+        var burst_20 = findObjs({
+            _type: "graphic",
+            name:  "burst_20_template_master",
+        })[0];
+        var burst_30 = findObjs({
+            _type: "graphic",
+            name:  "burst_30_template_master",
+        })[0];
+        var burst_40 = findObjs({
+            _type: "graphic",
+            name:  "burst_40_template_master",
+        })[0];
+
+        // Check if all are found...
+        //log(cone_15);
+        //log(cone_15_ortho);
+        //log(cone_30);
+        //log(cone_30_ortho);
+        //log(cone_60);
+        //log(cone_60_ortho);
+        //log(burst_5);
+        //log(burst_10);
+        //log(burst_15);
+        //log(burst_20);
+        //log(burst_30);
+        //log(burst_40);
+
+        var x = 280;
+        var y = 280;
+        var selected = msg.selected || "";
+        if(selected.length != 0 && selected[0]._type == "graphic") {
+            var obj = getObj(selected[0]._type, selected[0]._id);
+            x = obj.get("left");
+            y = obj.get("top");
+        }
+
+        var created1 = "";
+        var created2 = "";
+        //parse input string, cone or burst?
+        if(msg.content.indexOf("cone") !== -1) {
+            // 15, 30 or 60?
+            if(msg.content.indexOf("15") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 15ft. cones.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 15ft ortho cone",
+                    subtype:          "token",
+                    imgsrc:           cone_15_ortho.get("imgsrc"),
+                    width:            cone_15_ortho.get("width"),
+                    height:           cone_15_ortho.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_15_ortho.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+                created2 = createObj("graphic", {
+                    name:             "Template: 15ft cone",
+                    subtype:          "token",
+                    imgsrc:           cone_15.get("imgsrc"),
+                    width:            cone_15.get("width"),
+                    height:           cone_15.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_15.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf("30") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 30ft. cones.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 30ft ortho cone",
+                    subtype:          "token",
+                    imgsrc:           cone_30_ortho.get("imgsrc"),
+                    width:            cone_30_ortho.get("width"),
+                    height:           cone_30_ortho.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_30_ortho.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+                created2 = createObj("graphic", {
+                    name:             "Template: 30ft cone",
+                    subtype:          "token",
+                    imgsrc:           cone_30.get("imgsrc"),
+                    width:            cone_30.get("width"),
+                    height:           cone_30.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_30.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf("60") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 60ft. cones.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 60ft ortho cone",
+                    subtype:          "token",
+                    imgsrc:           cone_60_ortho.get("imgsrc"),
+                    width:            cone_60_ortho.get("width"),
+                    height:           cone_60_ortho.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_60_ortho.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+                created2 = createObj("graphic", {
+                    name:             "Template: 60ft cone",
+                    subtype:          "token",
+                    imgsrc:           cone_60.get("imgsrc"),
+                    width:            cone_60.get("width"),
+                    height:           cone_60.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     cone_60.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else {
+                sendChat("Template Spawner", "/w " + sender +
+                    " No cone available in that size.");
+            }
+        } else if(msg.content.indexOf("burst") !== -1) {
+            // 5, 10 or 20?
+            if(msg.content.indexOf(" 5") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 5ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 5ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_5.get("imgsrc"),
+                    width:            burst_5.get("width"),
+                    height:           burst_5.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_5.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf(" 10") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 10ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 10ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_10.get("imgsrc"),
+                    width:            burst_10.get("width"),
+                    height:           burst_10.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_10.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf(" 15") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 15ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 15ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_15.get("imgsrc"),
+                    width:            burst_15.get("width"),
+                    height:           burst_15.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_15.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf("20") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 20ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 20ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_20.get("imgsrc"),
+                    width:            burst_20.get("width"),
+                    height:           burst_20.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_20.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf("30") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 30ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 30ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_30.get("imgsrc"),
+                    width:            burst_30.get("width"),
+                    height:           burst_30.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_30.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else if(msg.content.indexOf("40") !== -1) {
+                sendChat("Template Spawner", "/w " + sender +
+                    " Spawning 40ft. burst.");
+                created1 = createObj("graphic", {
+                    name:             "Template: 40ft burst",
+                    subtype:          "token",
+                    imgsrc:           burst_40.get("imgsrc"),
+                    width:            burst_40.get("width"),
+                    height:           burst_40.get("height"),
+                    left:             x,
+                    top:              y,
+                    showname:         true,
+                    showplayers_name: true,
+                    layer:            "objects",
+                    controlledby:     burst_40.get("controlledby"),
+                    pageid:           Campaign().get("playerpageid"),
+                });
+            } else {
+                sendChat("Template Spawner", "/w " + sender +
+                    " No burst available in that size.");
+            }
+        } else {
+            sendChat("Template Spawner",
+                    "/w " + sender + " Usage:<br/>!t [15|30|60] cone<br/>!t [5"+
+                    "|10|15|20|30|40] burst");
+        }
+
+        var outstring = "";
+        if(created1 != "") {
+            outstring += created1.get("_id") + " ";
+        }
+        if(created2 != "") {
+            outstring += created2.get("_id");
+        }
+        if(outstring != "") {
+            sendChat("Template Spawner", "/w " + sender + " Click [here](!del " + outstring + ") to delete templates.");
+        }
+    }
+});
+// }}}
+
 // Card manager {{{
 // Implements the commands:
 //   !card
 //     - Display an arbitrary message in a pretty display.
-//   !scroll
-//     - Allows players to calculate scroll scribing costs.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
     msg = _.clone(msg);
@@ -681,56 +1010,98 @@ on("chat:message", function(msg) {
         sendFormatted(msgcontent, msg);
         return;
     }
+});
+// }}}
 
-    if(msg.content == "!scroll") {
-        sendChat("Scroll Cost Calculator", "/w " + sender +
-            " Usage:<br/>!scroll spelllevel casterlevel materialcosts");
+// Rollers {{{
+// Implements the commands:
+//   !vs
+//     - Makes a roll versus a target value.
+//   !monsterdamage
+//     - Does damage against a player.
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    msg = _.clone(msg);
+    var message;
+    var roll;
+    var args;
+    var messagercv;
+
+    if(msg.content.startsWith("!vs ")) {
+        msg.who = "Monster";
+        if(msg.content.contains("|")) {
+            sendChat("Error", "/w gm Select a player token.");
+            return;
+        }
+        roll = msg.content.replace("!vs ", "").trim();
+        args = roll.split(" ");
+        if(args.length < 5) {
+            sendChat("Error", "/w gm Not enough arguments.");
+            return;
+        }
+
+        var modifier = parseInt(args[0]);
+        var fudge = parseInt(args[1]);
+        var advantageStatus = parseInt(args[2]);
+        var target = parseInt(args[3]);
+        var diceRoll1 = randomInteger(20);
+        var diceRoll2 = randomInteger(20);
+        var diceRoll = advantageStatus == 1 ? Math.max(diceRoll1, diceRoll2) : (advantageStatus == 2 ? Math.min(diceRoll1, diceRoll2) : diceRoll1);
+        if(fudge > 0 && fudge <= 20) {
+            diceRoll = fudge;
+            var plausibleFudge = fudge;
+            if(advantageStatus == 1) {
+                plausibleFudge = randomInteger(fudge);
+            } else if(advantageStatus == 2) {
+                plausibleFudge = randomInteger(21 - fudge) + (fudge - 1);
+            }
+            if(randomInteger(2) == 1) {
+                diceRoll1 = fudge;
+                diceRoll2 = plausibleFudge;
+            } else {
+                diceRoll1 = plausibleFudge;
+                diceRoll2 = fudge;
+            }
+        }
+        var result = diceRoll + modifier;
+        var descriptor = "";
+        for(var i = 4; i < args.length; ++i)
+            descriptor += args[i] + " ";
+
+        var middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " + descriptor + "([[" + target + "]])|||";
+        if(advantageStatus == 1) {
+            middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll1 + "]] and [[" + diceRoll2 +"]] on the dice with advantage) vs. " + descriptor + "([[" + target + "]])|||";
+        } else if(advantageStatus == 2) {
+            middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll1 + "]] and [[" + diceRoll2 +"]] on the dice with disadvantage) vs. " + descriptor + "([[" + target + "]])|||";
+        }
+
+        if(diceRoll == 20) { // Crit
+            sendFormatted("R" + middlePart + "The attack crits.", msg);
+        } else if(diceRoll == 1) { // Complete miss.
+            sendFormatted("G" + middlePart + "The attack misses.", msg);
+        } else if(result >= target) { // Hit
+            sendFormatted("R" + middlePart + "The attack hits.", msg);
+        } else { // Miss
+            sendFormatted("G" + middlePart + "The attack misses.", msg);
+        }
         return;
     }
 
-    if(msg.content.startsWith("!scroll")) {
-        var messagercv = msg.content.split(" ");
-        if(messagercv.length < 4) return;
-        var level = parseInt(messagercv[1]);
-        var cl = parseInt(messagercv[2]);
-        var mats = parseInt(messagercv[3]);
-        if(isNaN(level) || isNaN(cl) || isNaN(mats)) return;
-        if(level == 0) level = 0.5;
-        var price = 12.5 * level * cl;
-        price += mats;
+    if(msg.content.startsWith("!monsterdamage ")) {
+        roll = msg.content.replace("!monsterdamage ", "").trim();
+        args = roll.split(" ");
+        var dice = args[0];
 
-        var timeunit = "";
-        if(price <= 750) {
-            timeunit = "hours";
-        } else if(price >= 2000) {
-            timeunit = "days";
-        } else {
-            timeunit = "day";
+        var selected = msg.selected || "the target";
+        if(selected.length != 0 && selected[0]._type == "graphic") {
+            var obj = getObj(selected[0]._type, selected[0]._id);
+            selected = obj.get("name");
         }
 
-        var time = 1;
-        if(price <= 750) {
-            if(price <= 250)
-                time = 2; else if(price <= 500)
-                time = 4; else
-                time = 6;
-        } else {
-            if(price < 2000) {
-                time = 1;
-            } else {
-                time = Math.floor(price / 1000);
-            }
-        }
-
-        message = "Scribe scoll__BR____S____NAME____ES__";
-        message = message + "|||Scribing a scroll with a level [[" + level +
-            "]] spell at caster level [[" + cl + "]].";
-        message = message + "|||This will cost [[" + price +
-            "]] gp and take [[" + time + "]] " + timeunit + ".";
-        message = message + "|||The spellcraft to succeed is DC [[5+" + cl +
-            "]], or DC [[10+" + cl + "]] to halve the time taken. This check i"+
-            "s made after the money and time is spent.";
+        message = "R|||Monster Damage|||The monster hits " + selected +
+            " for [[" + dice + "]] damage.";
         sendFormatted(message, msg);
+        return;
     }
 });
 // }}}
@@ -755,6 +1126,226 @@ on("chat:message", function(msg) {
         });
         if(typeof objs !== "undefined")
             objs[0].remove();
+    }
+});
+// }}}
+
+// Torch functionality {{{
+var Torch = Torch || (function() {
+    'use strict';
+
+    var version = 0.6,
+
+        showHelp = function() {
+            sendChat('', '/w gm <div style="border: 1px solid black; backgrou'+
+                'nd-color: white; padding: 3px 3px;"><div style="font-weight:'+
+                ' bold; border-bottom: 1px solid black;font-size: 130%;">Torc'+
+                'h v'+version +'</div><div style="padding-left:10px;margin-bo'+
+                'ttom:3px;"><p>Torch provides commands for managing dynamic l'+
+                'ighting.  Supplying a first argument of <b>help</b> to any o'+
+                'f the commands displays this help message, as will calling !'+
+                'torch or !snuff with nothing supplied or selected.</p></div>'+
+                '<b>Commands</b><div style="padding-left:10px;"><b><span styl'+
+                'e="font-family: serif;">!torch [<Radius> [<Dim Start> [<All '+
+                'Players>  [<Token ID> ... ]]]]</span></b><div style="padding'+
+                '-left: 10px;padding-right:20px"><p>Sets the light for the se'+
+                'lected/supplied tokens.  Only GMs can supply token ids to ad'+
+                'just.</p><p><b>Note:</b> If you are using multiple @{target|'+
+                'token_id} calls in a macro, and need to adjust light on fewe'+
+                'r than the supplied number of arguments, simply select the s'+
+                'ame token several times.  The duplicates will be removed.</p'+
+                '><ul><li style="border-top: 1px solid #ccc;border-bottom: 1p'+
+                'x solid #ccc;"><b><span style="font-family: serif;"><Radius>'+
+                '</span></b> - The radius that the light extends to. (Default'+
+                ': 40)</li> <li style="border-top: 1px solid #ccc;border-bott'+
+                'om: 1px solid #ccc;"><b><span style="font-family: serif;"><D'+
+                'im Start></span></b> - The radius at which the light begins '+
+                'to dim. (Default: Half of Radius )</li> <li style="border-to'+
+                'p: 1px solid #ccc;border-bottom: 1px solid #ccc;"><b><span s'+
+                'tyle="font-family: serif;"><All Players></span></b> - Should'+
+                ' all players see the light, or only the controlling players '+
+                '(Darkvision, etc). Specify one of <i>1, on, yes, true, sure,'+
+                ' yup, or -</i> for yes, anything else for no.  (Default: yes'+
+                ')</li> <li style="border-top: 1px solid #ccc;border-bottom: '+
+                '1px solid #ccc;"><b><span style="font-family: serif;"><Token'+
+                ' ID></span></b> - A Token ID, usually supplied with somethin'+
+                'g like @{target|Target 1|token_id}.</li> </ul></div><b><span'+
+                ' style="font-family: serif;">!snuff [<Token ID> ... ]</span>'+
+                '</b><div style="padding-left: 10px;padding-right:20px"><p>Tu'+
+                'rns off light for the selected/supplied tokens. Only GMs can'+
+                ' supply token ids to adjust.</p><p><b>Note:</b> If you are u'+
+                'sing multiple @{target|token_id} calls in a macro, and need '+
+                'to adjust light on fewer than the supplied number of argumen'+
+                'ts, simply select the same token several times.  The duplica'+
+                'tes will be removed.</p><ul><li style="border-top: 1px solid'+
+                '#ccc;border-bottom: 1px solid #ccc;"><b><span style="font-fa'+
+                'mily: serif;"><Token ID></span></b> - A Token ID, usually su'+
+                'pplied with something like @{target|Target 1|token_id}.</li>'+
+                '</ul></div><b><span style="font-family: serif;">!daytime [<T'+
+                'oken ID>]</span></b><div style="padding-left: 10px;padding-r'+
+                'ight:20px"><p>Turns off dynamic lighting for the current pla'+
+                'yer page, or the page of the selected/supplied token.</p><ul'+
+                '><li style="border-top: 1px solid #ccc;border-bottom: 1px so'+
+                'lid #ccc;"><b><span style="font-family: serif;"><Token ID></'+
+                'span></b> - A Token ID, usually supplied with something like'+
+                ' @{target|Target 1|token_id}.</li> </ul></div><b><span style'+
+                '="font-family: serif;">!nighttime [<Token ID>]</span></b><di'+
+                'v style="padding-left: 10px;padding-right:20px"><p>Turns on '+
+                'dynamic lighting for the current player page, or the page of'+
+                ' the selected/supplied token.</p><ul><li style="border-top: '+
+                '1px solid #ccc;border-bottom: 1px solid #ccc;"><b><span styl'+
+                'e="font-family: serif;"><Token ID></span></b> - A Token ID, '+
+                'usually supplied with something like @{target|Target 1|token'+
+                '_id}.</li> </ul></div></div></div>');
+        },
+
+        handleInput = function(msg) {
+            var args, radius, dim_radius, other_players, page, obj;
+
+            if (msg.type !== "api") {
+                return;
+            }
+
+            args = msg.content.split(" ");
+            switch(args[0]) {
+                case '!torch':
+                    if('help' === args[1] || ( !_.has(msg,'selected') &&
+                        args.length < 5)) {
+                        showHelp();
+                        return;
+                    }
+                    radius = parseInt(args[1],10) || 40;
+                    dim_radius = parseInt(args[2],10) || (radius/2);
+                    other_players = _.contains([1,'1','on','yes','true','sure',
+                                                'yup','-'], args[3] || 1 );
+
+                    if(isGM(msg.playerid)) {
+                        _.chain(args)
+                            .rest(4)
+                            .uniq()
+                            .map(function(t){
+                                return getObj('graphic',t);
+                            })
+                            .reject(_.isUndefined)
+                            .each(function(t) {
+                                t.set({
+                                    light_radius: radius,
+                                    light_dimradius: dim_radius,
+                                    light_otherplayers: other_players
+                                });
+                            });
+                    }
+
+                    _.each(msg.selected,function (o) {
+                        getObj(o._type,o._id).set({
+                            light_radius: radius,
+                            light_dimradius: dim_radius,
+                            light_otherplayers: other_players
+                        });
+                    });
+                    break;
+
+                case '!snuff':
+                    if('help' === args[1] || ( !_.has(msg,'selected') &&
+                        args.length < 2)) {
+                        showHelp();
+                        return;
+                    }
+
+                    if(isGM(msg.playerid)) {
+                        _.chain(args)
+                            .rest(1)
+                            .uniq()
+                            .map(function(t){
+                                return getObj('graphic',t);
+                            })
+                            .reject(_.isUndefined)
+                            .each(function(t) {
+                                t.set({
+                                    light_radius: '',
+                                    light_dimradius: '',
+                                    light_otherplayers: false
+                                });
+                            });
+                    }
+                    _.each(msg.selected,function (o) {
+                        getObj(o._type,o._id).set({
+                            light_radius: '',
+                            light_dimradius: '',
+                            light_otherplayers: false
+                        });
+                    });
+                    break;
+
+                case '!daytime':
+                    if('help' === args[1]) {
+                        showHelp();
+                        return;
+                    }
+                    if(isGM(msg.playerid)) {
+                        if(msg.selected) {
+                            obj=getObj('graphic', msg.selected[0]._id);
+                        } else if(args[1]) {
+                            obj=getObj('graphic', args[1]);
+                        }
+                        page = getObj('page', (obj && obj.get('pageid')) ||
+                            Campaign().get('playerpageid'));
+
+                        if(page) {
+                            page.set({
+                                showlighting: false
+                            });
+                            sendChat('','/w gm It is now <b>Daytime</b> on '+
+                                page.get('name')+'!');
+                        }
+                    }
+                    break;
+
+                case '!nighttime':
+                    if('help' === args[1]) {
+                        showHelp();
+                        return;
+                    }
+                    if(isGM(msg.playerid)) {
+                        if(msg.selected) {
+                            obj=getObj('graphic',msg.selected[0]._id);
+                        } else if(args[1]) {
+                            obj=getObj('graphic', args[1]);
+                        }
+                        page = getObj('page', (obj && obj.get('pageid')) ||
+                            Campaign().get('playerpageid'));
+
+                        if(page) {
+                            page.set({
+                                showlighting: true
+                            });
+                            sendChat('','/w gm It is now <b>Nighttime</b> on '+
+                                page.get('name')+'!');
+                        }
+                    }
+                    break;
+            }
+
+        },
+
+        registerEventHandlers = function() {
+            on('chat:message', handleInput);
+        };
+
+    return {
+        RegisterEventHandlers: registerEventHandlers
+    };
+}());
+on("ready",function(){
+    'use strict';
+
+    if("undefined" !== typeof isGM && _.isFunction(isGM)) {
+        Torch.RegisterEventHandlers();
+    } else {
+        log('--------------------------------------------------------------');
+        log('Torch requires the isGM module to work.');
+        log('isGM GIST: https://gist.github.com/shdwjk/8d5bb062abab18463625');
+        log('--------------------------------------------------------------');
     }
 });
 // }}}
@@ -1247,6 +1838,528 @@ on("chat:message", function(msg) {
             xeReset();
             break;
     }
+});
+// }}}
+
+// Api Heartbeat {{{
+// Github:   https://github.com/shdwjk/Roll20API/blob/master/APIHeartBeat/APIHeartBeat.js
+// By:       The Aaron, Arcane Scriptomancer
+// Contact:  https://app.roll20.net/users/104025/the-aaron
+var APIHeartBeat = APIHeartBeat || (function() {
+    'use strict';
+
+    var version = 0.3,
+        schemaVersion = 0.2,
+        beatInterval = false,
+        beatPeriod = 200,
+        devScaleFactor = 5,
+        beatCycle = 3000,
+
+        scaleColorRange = function(scale, color1, color2) {
+            return _.chain(
+                _.zip(
+                    _.rest(color1.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/)),
+                    _.rest(color2.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/))
+                )
+            )
+                .map(function(d){
+                    var b1 = parseInt(d[0],16),
+                        b2 = parseInt(d[1],16);
+                    return Math.min(255,Math.max(0,((b2-b1)*scale+b1).toFixed(0))).toString(16);
+                })
+                .reduce(function(memo,d){
+                    return memo+(1===d.length ? '0' : '')+d;
+                },'#')
+                .value();
+        },
+
+        animateHeartBeat = function() {
+            var cycle = beatCycle * (state.APIHeartBeat.devMode ? 1 : devScaleFactor),
+                x = ((Date.now()%cycle)/cycle)*Math.PI*2,
+                scale = (Math.sin(x)+1)/2;
+
+            _.chain(state.APIHeartBeat.heartBeaters)
+                .map(function(d){
+                    return {
+                        player: getObj('player',d.pid),
+                        color1: d.color1,
+                        color2: d.color2
+                    };
+                })
+                .reject(function(d){
+                    return !d.player || !d.player.get('online');
+                })
+                .each(function(d){
+                    d.player.set({
+                        color: scaleColorRange(scale,d.color1,d.color2)
+                    });
+                });
+        },
+
+        startStopBeat = function() {
+            var userOnline=_.chain(
+                    _.keys(state.APIHeartBeat.heartBeaters)
+                )
+                    .map(function(pid){
+                        return getObj('player',pid);
+                    })
+                    .reject(_.isUndefined)
+                    .map(function(p){
+                        return p.get('online');
+                    })
+                    .reduce(function(memo,os){
+                        return memo||os;
+                    },false)
+                    .value(),
+                period=beatPeriod*( state.APIHeartBeat.devMode ? 1 : devScaleFactor );
+
+            if(!beatInterval && _.keys(state.APIHeartBeat.heartBeaters).length && userOnline) {
+                beatInterval = setInterval(animateHeartBeat,period);
+            } else if(beatInterval && (!_.keys(state.APIHeartBeat.heartBeaters).length || !userOnline) ) {
+                clearInterval(beatInterval);
+                beatInterval=false;
+            }
+        },
+
+        ch = function (c) {
+            var entities = {
+                '<' : 'lt',
+                '>' : 'gt',
+                "'" : '#39',
+                '@' : '#64',
+                '{' : '#123',
+                '|' : '#124',
+                '}' : '#125',
+                '[' : '#91',
+                ']' : '#93',
+                '"' : 'quot',
+                '-' : 'mdash',
+                ' ' : 'nbsp'
+            };
+
+            if(_.has(entities,c) ){
+                return ('&'+entities[c]+';');
+            }
+            return '';
+        },
+
+        showHelp = function(who) {
+            sendChat('',
+                    '/w '+who+' '
+                    +'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
+                    +'<div style="font-weight: bold; border-bottom: 1px solid black;font-size: 130%;">'
+                    +'APIHeartBeat v'+version
+                    +'</div>'
+                    +'<div style="padding-left:10px;margin-bottom:3px;">'
+                    +'<p>APIHeartBeat provides visual feedback that the API is running by changing a user'+ch("'")+'s color periodically.</p>'
+                    +'</div>'
+                    +'<b>Commands</b>'
+                    +'<div style="padding-left:10px;">'
+                    +'<b><span style="font-family: serif;">!api-heartbeat '+ch('<')+'<i>--help</i>|<i>--off</i>|<i>--dev</i>'+ch('>')+' '+ch('[')+ch('<')+'color'+ch('>')+ch(']')+' '+ch('[')+ch('<')+'color'+ch('>')+ch(']')+'</span></b>'
+
+                    +'<div style="padding-left: 10px;padding-right:20px">'
+                    +'<p>This command allows you to turn off and on the monitor, as well as configure it.</p>'
+                    +'<ul>'
+                    +'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
+                    +'<b><span style="font-family: serif;">'+ch('<')+'--help'+ch('>')+'</span></b> '+ch('-')+' Displays this help.'
+                    +'</li> '
+                    +'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
+                    +'<b><span style="font-family: serif;">'+ch('<')+'--off'+ch('>')+'</span></b> '+ch('-')+' Turns off the heartbeat for the current player.'
+                    +'</li> '
+                    +'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
+                    +'<b><span style="font-family: serif;">'+ch('<')+'--dev'+ch('>')+'</span></b> '+ch('-')+' Activates development mode. (<b>Warning:</b> This mode updates much more often and could contribute to performance issues, despite being great for script development.)'
+                    +'</li> '
+                    +'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
+                    +'<b><span style="font-family: serif;">'+ch('<')+'color'+ch('>')+'</span></b> '+ch('-')+' The script alternates between two colors.  If you specify 2 colors, it will use those.  If you specify 1 color, it will use that and your configured color. If you specify no colors, it will go between your configured color and black or red based on brightness.</b>'
+                    +'</li> '
+                    +'</ul>'
+                    +'</div>'
+                    +'</div>'
+                    +'</div>'
+            );
+        },
+
+        counterColor = function(color) {
+            if(parseInt(
+                    _.first(
+                        _.rest(
+                                (_.isString(color) ? color : '').match(/^#([0-9a-fA-F]{2})/) || []
+                        )
+                    ) || '00',
+                16) > 127
+                ){
+                return '#000000';
+            }
+            return '#ff0000';
+        },
+
+        handleInput = function(msg) {
+            var args, errors, player, who, color;
+
+            if (msg.type !== "api" && !isGM(msg.playerid)) {
+                return;
+            }
+            player = getObj('player',msg.playerid);
+            who = player && player.get('_displayname').split(' ')[0];
+
+            args = msg.content.split(/\s+/);
+            switch(args.shift()) {
+                case '!api-heartbeat':
+
+                    if(_.contains(args,'--help')) {
+                        showHelp(who);
+                        return;
+                    }
+
+                    if ( _.contains(args,'--off') ) {
+                        // turn off
+                        if(state.APIHeartBeat.heartBeaters[msg.playerid]) {
+                            color = state.APIHeartBeat.heartBeaters[msg.playerid].origColor;
+                            delete state.APIHeartBeat.heartBeaters[msg.playerid];
+                            startStopBeat();
+                            player.set({color: color});
+                        }
+                        sendChat('APIHeartBeat', '/w '+who+' Off for '+player.get('displayname')+'.');
+                    } else {
+                        if ( _.contains(args,'--dev') ) {
+                            state.APIHeartBeat.devMode = !state.APIHeartBeat.devMode;
+                            clearInterval(beatInterval);
+                            beatInterval=false;
+                            sendChat('APIHeartBeat', '/w '+who+' Dev Mode is now '+(state.APIHeartBeat.devMode ? 'ON' : 'OFF')+'.');
+                            args = _.chain(args).without('--dev').first(2).value();
+                            if( ! args.length ) {
+                                startStopBeat();
+                                return;
+                            }
+                        }
+
+                        errors=_.reduce(args, function(memo,a){
+                            if( ! a.match(/^(?:#?[0-9a-fA-F]{6})$/) ) {
+                                memo.push("Invalid color: "+a);
+                            }
+                            return memo;
+                        },[]);
+
+                        if(errors.length) {
+                            sendChat('APIHeartBeat', '/w '+who+' Errors: '+errors.join(' '));
+                        } else {
+                            switch(args.length) {
+                                case 2:
+                                    state.APIHeartBeat.heartBeaters[msg.playerid]= {
+                                        pid: msg.playerid,
+                                        origColor: player.get('color'),
+                                        color1: args[0],
+                                        color2: args[1]
+                                    };
+                                    break;
+                                case 1:
+                                    state.APIHeartBeat.heartBeaters[msg.playerid]= {
+                                        pid: msg.playerid,
+                                        origColor: player.get('color'),
+                                        color1: player.get('color'),
+                                        color2: args[0]
+                                    };
+                                    break;
+                                default:
+                                    state.APIHeartBeat.heartBeaters[msg.playerid]= {
+                                        pid: msg.playerid,
+                                        origColor: player.get('color'),
+                                        color1: player.get('color'),
+                                        color2: counterColor(player.get('color'))
+                                    };
+                            }
+                            sendChat('APIHeartBeat', '/w '+who+' Configured on for '+player.get('displayname')+'.');
+                        }
+                        startStopBeat();
+                    }
+                    break;
+            }
+        },
+
+        checkInstall = function() {
+            if( ! _.has(state,'APIHeartBeat') || state.APIHeartBeat.version !== schemaVersion) {
+                log('APIHeartBeat: Resetting state');
+                state.APIHeartBeat = {
+                    version: schemaVersion,
+                    devMode: false,
+                    heartBeaters: {}
+                };
+            }
+
+            startStopBeat();
+        },
+
+        registerEventHandlers = function() {
+            on('chat:message', handleInput);
+            on('change:player:_online', startStopBeat);
+        };
+
+    return {
+        CheckInstall: checkInstall,
+        RegisterEventHandlers: registerEventHandlers
+    };
+
+}());
+on('ready',function() {
+    'use strict';
+
+    if("undefined" !== typeof isGM && _.isFunction(isGM)) {
+        APIHeartBeat.CheckInstall();
+        APIHeartBeat.RegisterEventHandlers();
+    } else {
+        log('--------------------------------------------------------------');
+        log('APIHeartBeat requires the isGM module to work.');
+        log('isGM GIST: https://gist.github.com/shdwjk/8d5bb062abab18463625');
+        log('--------------------------------------------------------------');
+    }
+});
+// }}}
+
+// Set/SetMax System {{{
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    if(!msg.content.startsWith("!set ")) return;
+    msg = _.clone(msg);
+    msg.content = msg.content.toLowerCase().replace("!set ", "").trim();
+    var player = msg.playerid;
+    var sender = msg.who.split(" ")[0];
+    var args = msg.content.split(' ');
+
+    if(playerIsGM(player))
+        sender = "gm";
+
+    var characters = findObjs({
+        _type: "character",
+        name: msg.who
+    });
+
+    if(typeof characters != "undefined" && characters.length > 0) {
+        var char = characters[0];
+
+        // Check if this player is allowed to edit this character.
+        if(char.get("controlledby").contains("all") || char.get("controlledby").contains(player) || playerIsGM(player)) {
+            var newValue = args[args.length - 1];
+            args.pop();
+            var attrName = args.join(' ');
+
+            var attributes = findObjs({
+                name: attrName,
+                _characterid: char.get("_id")
+            }, {caseInsensitive: true});
+            var attribute = "";
+            if(typeof attributes != "undefined" && attributes.length != 0) {
+                attribute = attributes[0];
+            }
+
+            if(attribute != "") {
+                if(newValue.contains('/')) {
+                    var values = newValue.split('/');
+                    attribute.set("current", values[0]);
+                    attribute.set("max", values[1]);
+                } else {
+                    attribute.set("current", newValue);
+                }
+                var tokensAffected = findObjs({
+                    _pageid:  Campaign().get("playerpageid"),
+                    _type:    "graphic",
+                    _subtype: "token",
+                    represents: char.get("_id")
+                });
+                sendChat("Setter", "/w " + sender + " The attribute \"" + attrName + "\" has been set to \"" + newValue
+                    + "\".");
+            } else {
+                sendChat("Setter", "/w " + sender + " No attribute called \"" + attrName + "\" was found.");
+            }
+        } else {
+            sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+        }
+    } else {
+        sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+    }
+});
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    if(!msg.content.startsWith("!settext ")) return;
+    msg = _.clone(msg);
+    msg.content = msg.content.replace("!settext ", "").trim();
+    var player = msg.playerid;
+    var sender = msg.who.split(" ")[0];
+    var args = msg.content.split(';');
+
+    if(playerIsGM(player))
+        sender = "gm";
+
+    var characters = findObjs({
+        _type: "character",
+        name: msg.who
+    });
+
+    if(typeof characters != "undefined" && characters.length > 0) {
+        var char = characters[0];
+
+        // Check if this player is allowed to edit this character.
+        if(char.get("controlledby").contains("all") || char.get("controlledby").contains(player) || playerIsGM(player)) {
+            var newValue = args[args.length - 1].trim();
+            args.pop();
+            var attrName = args.join(' ').toLowerCase().trim();
+
+            var attributes = findObjs({
+                name: attrName,
+                _characterid: char.get("_id")
+            }, {caseInsensitive: true});
+            var attribute = "";
+            if(typeof attributes != "undefined" && attributes.length != 0) {
+                attribute = attributes[0];
+            }
+
+            if(attribute != "") {
+                if(newValue.contains('/')) {
+                    var values = newValue.split('/');
+                    attribute.set("current", values[0]);
+                    attribute.set("max", values[1]);
+                } else {
+                    attribute.set("current", newValue);
+                }
+                var tokensAffected = findObjs({
+                    _pageid:  Campaign().get("playerpageid"),
+                    _type:    "graphic",
+                    _subtype: "token",
+                    represents: char.get("_id")
+                });
+                if(typeof tokensAffected != "undefined")
+                    _.each(tokensAffected, function(obj) { bloodied(obj, "") });
+                sendChat("Setter", "/w " + sender + " The attribute \"" + attrName + "\" has been set to \"" + newValue
+                    + "\".");
+            } else {
+                sendChat("Setter", "/w " + sender + " No attribute called \"" + attrName + "\" was found.");
+            }
+        } else {
+            sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+        }
+    } else {
+        sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+    }
+});
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    if(!msg.content.startsWith("!setmax ")) return;
+    msg = _.clone(msg);
+    msg.content = msg.content.toLowerCase().replace("!setmax ", "").trim();
+    var player = msg.playerid;
+    var sender = msg.who.split(" ")[0];
+    var args = msg.content.split(' ');
+
+    if(playerIsGM(player))
+        sender = "gm";
+
+    var characters = findObjs({
+        _type: "character",
+        name: msg.who
+    });
+
+    if(typeof characters != "undefined" && characters.length > 0) {
+        var char = characters[0];
+
+        // Check if this player is allowed to edit this character.
+        if(char.get("controlledby").contains("all") || char.get("controlledby").contains(player) || playerIsGM(player)) {
+            var newValue = args[args.length - 1];
+            args.pop();
+            var attrName = args.join(' ');
+
+            var attributes = findObjs({
+                name: attrName,
+                _characterid: char.get("_id")
+            }, {caseInsensitive: true});
+            var attribute = "";
+            if(typeof attributes != "undefined" && attributes.length != 0) {
+                attribute = attributes[0];
+            }
+
+            if(attribute != "") {
+                attribute.set("max", newValue);
+                var tokensAffected = findObjs({
+                    _pageid:  Campaign().get("playerpageid"),
+                    _type:    "graphic",
+                    _subtype: "token",
+                    represents: char.get("_id")
+                });
+                sendChat("Setter", "/w " + sender + " The maximum of attribute \"" + attrName + "\" has been set to \"" + newValue
+                    + "\".");
+            } else {
+                sendChat("Setter", "/w " + sender + " No attribute called \"" + attrName + "\" was found.");
+            }
+        } else {
+            sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+        }
+    } else {
+        sendChat("Setter", "/w " + sender + " You need to activate this command when speaking as a character you control.");
+    }
+});
+// }}}
+
+// Dump Macros {{{
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    if(!msg.content.startsWith("!macros")) return;
+
+    var macros = findObjs({
+        _type: "macro"
+    });
+    _.each(macros, function(obj) {
+        log("--------- " + obj.get("name") + " --------- " + obj.get("id") + " ---------");
+        log(obj.get("action"));
+    });
+});
+// }}}
+
+// Flight tracker {{{
+// Implements the commands:
+//   !fly <n>
+//      - Sets the flight height of the selected tokens to n ft.
+on("chat:message", function(msg) {
+    if(msg.type != "api") return;
+    msg = _.clone(msg);
+    if(!msg.content.startsWith("!fly")) return;
+
+    // Error handling
+    var sender = msg.who.split(" ")[0];
+    var messagercv = msg.content.split(" ");
+    if(messagercv.length != 2) {
+        sendChat("Fly Manager", "/w " + sender + " No height given.");
+        return;
+    }
+    var height = parseInt(messagercv[1]);
+    if(isNaN(height)) {
+        sendChat("Fly Manager", "/w " + sender + " Invalid height.");
+        return;
+    }
+    if(typeof msg.selected == "undefined") {
+        sendChat("Fly Manager", "/w " + sender + " You must select at least one token.");
+        return;
+    }
+
+    _.each(msg.selected, function(selected) {
+        var obj = getObj("graphic", selected._id);
+        if(typeof obj == "undefined") return;
+        if(obj.get("_subtype") != "token") return;
+
+        // First we find the flying section of the name, then, if it exists, we strip it.
+        var name = obj.get("name");
+        name = name.replace(/\s*\[.*\]/ig, "");
+
+        // We now get the height (up in 3d) of the token in feet.
+        var size = obj.get("width") / 70 * 5;
+
+        // If the wanted height is 0 (landed) we put the stripped name as the name. Otherwise we append the occupied
+        // height to the name and replace it.
+        if(height == 0) {
+            obj.set("name", name);
+        } else {
+            if(name != "") name = name + " ";
+            name = name + "[" + height + "-" + (height + size) + " ft.]";
+            obj.set("name", name);
+        }
+    });
 });
 // }}}
 
@@ -2671,6 +3784,6 @@ var VecMath = (function() {
         }
     });
 })();
-//}}}
+// }}}
 
 // vim: fdm=marker
