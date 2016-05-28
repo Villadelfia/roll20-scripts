@@ -1,6 +1,3 @@
-// TODO:
-//  - Add support for "Advantage" and "Disadvantage" for the !vs command.
-
 // Globals, utility functions. {{{
 var titleStyleR = "font-family: Georgia; font-size: large; font-weight: normal"+
     "; text-align: center; vertical-align: middle; padding: 5px 0px; margin-to"+
@@ -19,8 +16,8 @@ var rowStyle = " padding: 5px; border-left: 1px solid #000; border-right: 1px "+
 var lastRowStyle = " padding: 5px; border-left: 1px solid #000; border-bottom:"+
     " 1px solid #000; border-right: 1px solid #000; border-radius: 0px 0px 5p"+
     "x 5px; ";
-var oddRow = " background-color: #000; color: #FFF;";
-var evenRow = " background-color: #222; color: #FFF;";
+var oddRow = " background: #000; color: #FFF;";
+var evenRow = " background: #222; color: #FFF;";
 var titleTagR = "<div style =\"" + titleStyleR + "\">";
 var titleTagG = "<div style =\"" + titleStyleG + "\">";
 var titleTagB = "<div style =\"" + titleStyleB + "\">";
@@ -40,6 +37,11 @@ String.prototype.startsWith = function(str) {
 };
 String.prototype.endsWith = function(str) {
     return this.slice(-str.length) == str;
+};
+Math.hammingWeight = function(i) {
+    i = i - ((i >> 1) & 0x55555555);
+    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+    return ((i + (i >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
 };
 
 var sendFormatted = function(message, msg) {
@@ -87,8 +89,8 @@ var sendFormatted = function(message, msg) {
     default_styles["lilith"] = ["#9B1E1E", "#FFFFFF", "#BD3F3F", "#FFFFFF", "#E36A6A", "#FFFFFF"];
     default_styles["shenzi"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
     default_styles["fidget"] = ["#06431B", "#FFFFFF", "#1A6232", "#FFFFFF", "#307A49", "#FFFFFF"];
+    default_styles["gm"] =     ["#931100", "#FFFFFF", "#BB220E", "#FFFFFF", "#E63B25", "#FFFFFF"];
     var default_style = default_styles[msg.who.split(' ')[0].toLowerCase()];
-
 
     // Title styling.
     var ctr = 0;
@@ -144,10 +146,9 @@ var sendFormatted = function(message, msg) {
                 var r = parseInt(elements[2]);
                 if(isNaN(l) || isNaN(r)) continue;
                 var deleted = false;
-                switch(elements[1]) {
+                switch(elements[1].toLowerCase()) {
                     case ">":
                     case "gt":
-                    case "GT":
                         if(l <= r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -155,7 +156,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case ">=":
                     case "ge":
-                    case "GE":
                         if(l < r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -163,7 +163,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case "<":
                     case "lt":
-                    case "LT":
                         if(l >= r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -171,7 +170,6 @@ var sendFormatted = function(message, msg) {
                         break;
                     case "<=":
                     case "le":
-                    case "LE":
                         if(l > r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -180,9 +178,7 @@ var sendFormatted = function(message, msg) {
                     case "=":
                     case "==":
                     case "e":
-                    case "E":
                     case "eq":
-                    case "EQ":
                         if(l != r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
@@ -191,10 +187,52 @@ var sendFormatted = function(message, msg) {
                     case "!=":
                     case "=/=":
                     case "ne":
-                    case "NE":
                     case "neq":
-                    case "NEQ":
                         if(l == r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "binand":
+                    case "and":
+                        if(!(l & r)) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "binor":
+                    case "or":
+                        if(!(l | r)) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwgt":
+                        if(Math.hammingWeight(l) <= r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwge":
+                        if(Math.hammingWeight(l) < r) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwlt":
+                        if(Math.hammingWeight(l) >= r || l == 0) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hwle":
+                        if(Math.hammingWeight(l) > r || l == 0) {
+                            messagercv.splice(condctr, 1);
+                            deleted = true;
+                        }
+                        break;
+                    case "hw":
+                        if(Math.hammingWeight(l) != r) {
                             messagercv.splice(condctr, 1);
                             deleted = true;
                         }
@@ -225,8 +263,8 @@ var sendFormatted = function(message, msg) {
         messagercv[ctr] = messagercv[ctr].replace(/#[0-9A-F]{6}/ig, "");
         if(rowstyle && rowstyle.length != 0) {
             // Background.
-            tag = tag.replace("background-color: #000;", "background-color: " + rowstyle[0] + ";");
-            tag = tag.replace("background-color: #222;", "background-color: " + rowstyle[0] + ";");
+            tag = tag.replace("background: #000;", "background: " + rowstyle[0] + ";");
+            tag = tag.replace("background: #222;", "background: " + rowstyle[0] + ";");
         }
 
         if(rowstyle && rowstyle.length > 1) {
@@ -236,12 +274,12 @@ var sendFormatted = function(message, msg) {
 
         if((!rowstyle || rowstyle.length == 0) && typeof default_style != 'undefined') {
             if(ctr % 2 == changed) { // Odd
-                tag = tag.replace("background-color: #000;", "background-color: " + default_style[2] + ";");
-                tag = tag.replace("background-color: #222;", "background-color: " + default_style[2] + ";");
+                tag = tag.replace("background: #000;", "background: " + default_style[2] + ";");
+                tag = tag.replace("background: #222;", "background: " + default_style[2] + ";");
                 tag = tag.replace("; color: #FFF", "; color: " + default_style[3]);
             } else { // Even
-                tag = tag.replace("background-color: #000;", "background-color: " + default_style[4] + ";");
-                tag = tag.replace("background-color: #222;", "background-color: " + default_style[4] + ";");
+                tag = tag.replace("background: #000;", "background: " + default_style[4] + ";");
+                tag = tag.replace("background: #222;", "background: " + default_style[4] + ";");
                 tag = tag.replace("; color: #FFF", "; color: " + default_style[5]);
             }
         }
@@ -479,7 +517,7 @@ on("chat:message", function(msg) {
             _pageid:  Campaign().get("playerpageid"),
             _type:    "graphic",
             _subtype: "token",
-            _layer:   "objects",
+            _layer:   "objects"
         });
 
         var turnorder = [];
@@ -497,15 +535,31 @@ on("chat:message", function(msg) {
 
             // If the current token represents a character.
             if(currChar.length != 0) {
-                // Set the modifier.
+                // find dex
                 var mod = findObjs({
-                    name:         "initiative",
-                    _characterid: currId,
+                    name:         "dexterity",
+                    _characterid: currId
                 }, {caseInsensitive: true});
+
+                var dex = 10;
                 if(mod.length != 0) {
-                    currentModifier = parseInt(mod[0].get("current"));
-                    if(isNaN(currentModifier)) currentModifier = 0;
+                    dex = parseInt(mod[0].get("current"));
+                    if(isNaN(currentModifier)) dex = 10;
                 }
+
+                // find initiative modifier
+                mod = findObjs({
+                    name:         "initmod",
+                    _characterid: currId
+                }, {caseInsensitive: true});
+
+                var initmod = 0;
+                if(mod.length != 0) {
+                    initmod = parseInt(mod[0].get("current"));
+                    if(isNaN(currentModifier)) initmod = 0;
+                }
+
+                currentModifier = Math.floor((dex-10)/2) + initmod;
 
                 // Set the roll result and give feedback.
                 totalValue = diceRoll + currentModifier;
@@ -977,18 +1031,10 @@ on("chat:message", function(msg) {
 
 // Rollers {{{
 // Implements the commands:
-//   !blindroll
-//     - Sends a roll to the GM, but does not reveal the result to the roller.
 //   !vs
 //     - Makes a roll versus a target value.
 //   !monsterdamage
 //     - Does damage against a player.
-//   !a
-//   !attack
-//     - Rolls an attack in a pretty display.
-//   !d
-//   !damage
-//     - Rolls attack damage in a pretty display.
 on("chat:message", function(msg) {
     if(msg.type != "api") return;
     msg = _.clone(msg);
@@ -997,26 +1043,8 @@ on("chat:message", function(msg) {
     var args;
     var messagercv;
 
-    if(msg.content.startsWith("!blindroll ")) {
-        roll = msg.content.replace("!blindroll ", "").trim();
-        var sender = msg.who.split(" ")[0];
-        if(roll.length > 0) {
-            while(roll.contains("++")) {
-                roll = roll.replace("++", "+");
-            }
-            while(roll.contains("+-")) {
-                roll = roll.replace("+-", "-");
-            }
-
-            sendFormatted("{{B}} {{Blind Skill Check\\n__S____NAME____ES__}} {{**Roll 1:** [[" + roll +
-                "]]}} {{**Roll 2:** [[" + roll + "]]}} {{**Roll 3:** [[" + roll + "]]}}", msg);
-            sendNextMessageToGm = true;
-            sendFormatted("{{G}} {{Which die?}} {{Use result number " + randomInteger(3) + ".}}", msg);
-        }
-        return;
-    }
-
     if(msg.content.startsWith("!vs ")) {
+        msg.who = "Monster";
         if(msg.content.contains("|")) {
             sendChat("Error", "/w gm Select a player token.");
             return;
@@ -1027,30 +1055,50 @@ on("chat:message", function(msg) {
             sendChat("Error", "/w gm Not enough arguments.");
             return;
         }
-        var diceRoll = randomInteger(20);
+
         var modifier = parseInt(args[0]);
-        var critrange = parseInt(args[1]);
-        var fudge = parseInt(args[2]);
-        if(fudge > 0 && fudge <= 20)
-            diceRoll = fudge;
+        var fudge = parseInt(args[1]);
+        var advantageStatus = parseInt(args[2]);
         var target = parseInt(args[3]);
+        var diceRoll1 = randomInteger(20);
+        var diceRoll2 = randomInteger(20);
+        var diceRoll = advantageStatus == 1 ? Math.max(diceRoll1, diceRoll2) : (advantageStatus == 2 ? Math.min(diceRoll1, diceRoll2) : diceRoll1);
+        if(fudge > 0 && fudge <= 20) {
+            diceRoll = fudge;
+            var plausibleFudge = fudge;
+            if(advantageStatus == 1) {
+                plausibleFudge = randomInteger(fudge);
+            } else if(advantageStatus == 2) {
+                plausibleFudge = randomInteger(21 - fudge) + (fudge - 1);
+            }
+            if(randomInteger(2) == 1) {
+                diceRoll1 = fudge;
+                diceRoll2 = plausibleFudge;
+            } else {
+                diceRoll1 = plausibleFudge;
+                diceRoll2 = fudge;
+            }
+        }
         var result = diceRoll + modifier;
         var descriptor = "";
         for(var i = 4; i < args.length; ++i)
             descriptor += args[i] + " ";
 
-        if(diceRoll >= critrange) { // Crit
-            sendFormatted("R|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " +
-                descriptor + "([[" + target + "]])|||The attack crits.", msg);
+        var middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " + descriptor + "([[" + target + "]])|||";
+        if(advantageStatus == 1) {
+            middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll1 + "]] and [[" + diceRoll2 +"]] on the dice with advantage) vs. " + descriptor + "([[" + target + "]])|||";
+        } else if(advantageStatus == 2) {
+            middlePart = "|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll1 + "]] and [[" + diceRoll2 +"]] on the dice with disadvantage) vs. " + descriptor + "([[" + target + "]])|||";
+        }
+
+        if(diceRoll == 20) { // Crit
+            sendFormatted("R" + middlePart + "The attack crits.", msg);
         } else if(diceRoll == 1) { // Complete miss.
-            sendFormatted("B|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " +
-                descriptor + "([[" + target + "]])|||The attack misses completely.", msg);
+            sendFormatted("G" + middlePart + "The attack misses.", msg);
         } else if(result >= target) { // Hit
-            sendFormatted("R|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " +
-                descriptor + "([[" + target + "]])|||The attack hits.", msg);
+            sendFormatted("R" + middlePart + "The attack hits.", msg);
         } else { // Miss
-            sendFormatted("G|||Monster Attack|||I roll a [[" + result + "]] ([[" + diceRoll + "]] on the die) vs. " +
-                descriptor + "([[" + target + "]])|||The attack misses.", msg);
+            sendFormatted("G" + middlePart + "The attack misses.", msg);
         }
         return;
     }
@@ -1070,33 +1118,6 @@ on("chat:message", function(msg) {
             " for [[" + dice + "]] damage.";
         sendFormatted(message, msg);
         return;
-    }
-
-    if(msg.content.startsWith("!a ") || msg.content.startsWith("!attack ")) {
-        messagercv = msg.content.split(" ");
-        if(messagercv.length < 2) return;
-        roll = messagercv[1];
-        while(roll.contains("++")) {
-            roll = roll.replace("++", "+");
-        }
-        while(roll.contains("+-")) {
-            roll = roll.replace("+-", "-");
-        }
-
-        message = "B|||To Hit Roll__BR____S____NAME____ES__|||I roll [[" +
-            roll + "]] to hit.";
-        sendFormatted(message, msg);
-        return;
-    }
-
-    if(msg.content.startsWith("!d ") || msg.content.startsWith("!damage ")) {
-        messagercv = msg.content.split(" ");
-        if(messagercv.length < 2) return;
-        roll = messagercv[1];
-
-        message = "R|||Damage__BR____S____NAME____ES__|||I do [[" + roll +
-            "]] points of damage.";
-        sendFormatted(message, msg);
     }
 });
 // }}}
